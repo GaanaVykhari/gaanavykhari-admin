@@ -1,10 +1,17 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+let _razorpay: Razorpay | null = null;
+
+function getRazorpay(): Razorpay {
+  if (!_razorpay) {
+    _razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    });
+  }
+  return _razorpay;
+}
 
 interface CreatePaymentLinkParams {
   amount: number; // in INR (will be converted to paisa)
@@ -47,7 +54,7 @@ export async function createPaymentLink({
     options.expire_by = Math.floor(new Date(dueDate).getTime() / 1000);
   }
 
-  const link = await (razorpay as any).paymentLink.create(options);
+  const link = await (getRazorpay() as any).paymentLink.create(options);
   return { id: link.id, short_url: link.short_url };
 }
 
