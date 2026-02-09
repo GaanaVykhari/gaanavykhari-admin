@@ -25,6 +25,7 @@ import { format } from 'date-fns';
 import { SessionStatusBadge } from '@/components/common/StatusBadge';
 import { formatTime } from '@/lib/format';
 import { DAY_LABELS } from '@/lib/constants';
+import { getWhatsAppUrl, getCancellationMessage } from '@/lib/whatsapp';
 import type { Student, Holiday, SessionStatus } from '@/types';
 
 interface SessionData {
@@ -233,6 +234,10 @@ export default function SessionManager({
 
       const data = await response.json();
       if (data.ok) {
+        if (status === 'canceled' && student) {
+          const msg = getCancellationMessage(student.name, date, time);
+          window.open(getWhatsAppUrl(student.phone, msg), '_blank');
+        }
         loadSessions();
         onSessionUpdated?.();
       }
@@ -245,7 +250,12 @@ export default function SessionManager({
     }
   };
 
-  const handleStatusUpdate = async (sessionId: string, newStatus: string) => {
+  const handleStatusUpdate = async (
+    sessionId: string,
+    newStatus: string,
+    date?: string,
+    time?: string
+  ) => {
     try {
       const response = await fetch(`/api/sessions/${sessionId}`, {
         method: 'PATCH',
@@ -254,6 +264,10 @@ export default function SessionManager({
       });
 
       if (response.ok) {
+        if (newStatus === 'canceled' && student && date && time) {
+          const msg = getCancellationMessage(student.name, date, time);
+          window.open(getWhatsAppUrl(student.phone, msg), '_blank');
+        }
         loadSessions();
         onSessionUpdated?.();
       }
@@ -425,7 +439,12 @@ export default function SessionManager({
                             variant="light"
                             color="yellow"
                             onClick={() =>
-                              handleStatusUpdate(existing.id, 'canceled')
+                              handleStatusUpdate(
+                                existing.id,
+                                'canceled',
+                                entry.date,
+                                entry.time
+                              )
                             }
                           >
                             Cancel

@@ -27,6 +27,7 @@ import {
   IconX,
   IconCalendarEvent,
   IconAlertTriangle,
+  IconBrandWhatsapp,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { StatsCard } from '@/components/common/StatsCard';
@@ -39,6 +40,7 @@ import {
   formatCurrency,
   getRelativeDateString,
 } from '@/lib/format';
+import { getWhatsAppUrl, getCancellationMessage } from '@/lib/whatsapp';
 import type {
   DashboardStats,
   ScheduleEntry,
@@ -129,6 +131,21 @@ export default function DashboardPage() {
         message: `Session marked as ${status}`,
         color: 'green',
       });
+
+      // Open WhatsApp with cancellation message
+      if (status === 'canceled') {
+        const entry = todaySchedule.find(e => e.student.id === studentId);
+        if (entry) {
+          const today = new Date().toISOString().split('T')[0]!;
+          const msg = getCancellationMessage(
+            entry.student.name,
+            today,
+            entry.time
+          );
+          window.open(getWhatsAppUrl(entry.student.phone, msg), '_blank');
+        }
+      }
+
       loadDashboard();
     } catch {
       notifications.show({

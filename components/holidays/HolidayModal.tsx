@@ -9,10 +9,27 @@ import {
   Stack,
   Text,
   Alert,
+  ActionIcon,
+  CopyButton,
+  Tooltip,
+  ScrollArea,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
-import { IconCalendar, IconPlus } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import {
+  IconCalendar,
+  IconPlus,
+  IconBrandWhatsapp,
+  IconCopy,
+  IconCheck,
+} from '@tabler/icons-react';
+import { getWhatsAppUrl, getHolidayMessage } from '@/lib/whatsapp';
+
+interface AffectedStudent {
+  id: string;
+  name: string;
+  phone: string;
+}
 
 interface HolidayModalProps {
   opened: boolean;
@@ -29,6 +46,11 @@ export function HolidayModal({
   const [toDate, setToDate] = useState<Date | null>(null);
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'form' | 'notify'>('form');
+  const [affectedStudents, setAffectedStudents] = useState<AffectedStudent[]>(
+    []
+  );
+  const [holidayMessage, setHolidayMessage] = useState('');
 
   const handleSubmit = async () => {
     if (!fromDate || !toDate) {
@@ -51,12 +73,15 @@ export function HolidayModal({
 
     setLoading(true);
     try {
+      const fromStr = fromDate.toISOString().split('T')[0]!;
+      const toStr = toDate.toISOString().split('T')[0]!;
+
       const response = await fetch('/api/holidays', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from_date: fromDate.toISOString().split('T')[0],
-          to_date: toDate.toISOString().split('T')[0],
+          from_date: fromStr,
+          to_date: toStr,
           description,
         }),
       });
@@ -70,7 +95,12 @@ export function HolidayModal({
           color: 'green',
         });
         onHolidayCreated();
-        handleClose();
+
+        const students = data.data?.affectedStudents || [];
+        const msg = getHolidayMessage(fromStr, toStr, description || undefined);
+        setAffectedStudents(students);
+        setHolidayMessage(msg);
+        setStep('notify');
       } else {
         notifications.show({
           title: 'Error',
@@ -94,6 +124,9 @@ export function HolidayModal({
     setToDate(null);
     setDescription('');
     setLoading(false);
+    setStep('form');
+    setAffectedStudents([]);
+    setHolidayMessage('');
     onClose();
   };
 
@@ -107,60 +140,123 @@ export function HolidayModal({
     <Modal
       opened={opened}
       onClose={handleClose}
-      title="Schedule Holiday"
+      title={step === 'form' ? 'Schedule Holiday' : 'Notify Students'}
       size="md"
       centered
     >
-      <Stack gap="md">
-        <Alert color="blue" variant="light">
-          <Text size="sm">
-            Select a date range for the holiday. Any scheduled sessions during
-            this period will be automatically canceled and students will be
-            notified via email.
+      {step === 'form' ? (
+        <Stack gap="md">
+          <Alert color="blue" variant="light">
+            <Text size="sm">
+              Select a date range for the holiday. Any scheduled sessions during
+              this period will be automatically canceled.
+            </Text>
+          </Alert>
+
+          <DateInput
+            label="From Date"
+            placeholder="Select start date"
+            value={fromDate}
+            onChange={value => setFromDate(value ? new Date(value) : null)}
+            minDate={getMinDate()}
+            leftSection={<IconCalendar size={16} />}
+            required
+          />
+
+          <DateInput
+            label="To Date"
+            placeholder="Select end date"
+            value={toDate}
+            onChange={value => setToDate(value ? new Date(value) : null)}
+            minDate={fromDate || getMinDate()}
+            leftSection={<IconCalendar size={16} />}
+            required
+          />
+
+          <Textarea
+            label="Description (Optional)"
+            placeholder="Enter holiday description..."
+            value={description}
+            onChange={e => setDescription(e.currentTarget.value)}
+            rows={3}
+          />
+
+          <Group justify="flex-end" mt="md">
+            <Button variant="light" onClick={handleClose} disabled={loading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              loading={loading}
+              leftSection={<IconPlus size={16} />}
+            >
+              Create Holiday
+            </Button>
+          </Group>
+        </Stack>
+      ) : (
+        <Stack gap="md">
+          <Alert color="green" variant="light">
+            <Text size="sm">
+              Holiday created. Send the message below to your students via
+              WhatsApp.
+            </Text>
+          </Alert>
+
+          <Group gap="xs" align="flex-start">
+            <Textarea
+              value={holidayMessage}
+              readOnly
+              rows={5}
+              style={{ flex: 1 }}
+            />
+            <CopyButton value={holidayMessage}>
+              {({ copied, copy }) => (
+                <Tooltip label={copied ? 'Copied' : 'Copy message'}>
+                  <ActionIcon
+                    variant="light"
+                    color={copied ? 'teal' : 'gray'}
+                    onClick={copy}
+                    size="lg"
+                  >
+                    {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                  </ActionIcon>
+                </Tooltip>
+              )}
+            </CopyButton>
+          </Group>
+
+          <Text size="sm" fw={500}>
+            Send to students ({affectedStudents.length})
           </Text>
-        </Alert>
+          <ScrollArea.Autosize mah={250}>
+            <Stack gap="xs">
+              {affectedStudents.map(s => (
+                <Group key={s.id} justify="space-between">
+                  <Text size="sm">{s.name}</Text>
+                  <ActionIcon
+                    variant="light"
+                    color="green"
+                    component="a"
+                    href={getWhatsAppUrl(s.phone, holidayMessage)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`WhatsApp ${s.name}`}
+                  >
+                    <IconBrandWhatsapp size={16} />
+                  </ActionIcon>
+                </Group>
+              ))}
+            </Stack>
+          </ScrollArea.Autosize>
 
-        <DateInput
-          label="From Date"
-          placeholder="Select start date"
-          value={fromDate}
-          onChange={value => setFromDate(value ? new Date(value) : null)}
-          minDate={getMinDate()}
-          leftSection={<IconCalendar size={16} />}
-          required
-        />
-
-        <DateInput
-          label="To Date"
-          placeholder="Select end date"
-          value={toDate}
-          onChange={value => setToDate(value ? new Date(value) : null)}
-          minDate={fromDate || getMinDate()}
-          leftSection={<IconCalendar size={16} />}
-          required
-        />
-
-        <Textarea
-          label="Description (Optional)"
-          placeholder="Enter holiday description..."
-          value={description}
-          onChange={e => setDescription(e.currentTarget.value)}
-          rows={3}
-        />
-
-        <Group justify="flex-end" mt="md">
-          <Button variant="light" onClick={handleClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            loading={loading}
-            leftSection={<IconPlus size={16} />}
-          >
-            Create Holiday
-          </Button>
-        </Group>
-      </Stack>
+          <Group justify="flex-end" mt="md">
+            <Button variant="light" onClick={handleClose}>
+              Done
+            </Button>
+          </Group>
+        </Stack>
+      )}
     </Modal>
   );
 }

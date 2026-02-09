@@ -84,12 +84,22 @@ export async function POST(request: NextRequest) {
       .gte('date', from_date)
       .lte('date', to_date);
 
+    // Fetch active students for WhatsApp notification
+    const { data: activeStudents } = await supabase
+      .from('students')
+      .select('id, name, phone')
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+
     return NextResponse.json(
       {
         ok: true,
         message: 'Holiday created successfully',
-        data: holiday,
-      } satisfies ApiResponse<Holiday>,
+        data: {
+          holiday,
+          affectedStudents: activeStudents || [],
+        },
+      } satisfies ApiResponse,
       { status: 201 }
     );
   } catch (err) {

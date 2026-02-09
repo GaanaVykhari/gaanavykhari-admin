@@ -15,10 +15,16 @@ import {
   SimpleGrid,
 } from '@mantine/core';
 import { useDisclosure, useDebouncedValue } from '@mantine/hooks';
-import { IconSearch, IconUserPlus, IconPhone } from '@tabler/icons-react';
+import {
+  IconSearch,
+  IconUserPlus,
+  IconPhone,
+  IconBrandWhatsapp,
+} from '@tabler/icons-react';
 import AddStudentForm from '@/components/students/AddStudentForm';
 import { formatTime } from '@/lib/format';
 import { DAY_LABELS } from '@/lib/constants';
+import { getWhatsAppUrl } from '@/lib/whatsapp';
 import type { Student } from '@/types';
 
 function formatScheduleBadges(schedule: Record<string, string>) {
@@ -124,6 +130,15 @@ export default function StudentsPage() {
                 <Text size="sm" c="dimmed">
                   {student.phone}
                 </Text>
+                <IconBrandWhatsapp
+                  size={14}
+                  color="var(--mantine-color-green-6)"
+                  style={{ cursor: 'pointer' }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    window.open(getWhatsAppUrl(student.phone), '_blank');
+                  }}
+                />
               </Group>
 
               <Group mt="sm" gap="xs" wrap="wrap">
