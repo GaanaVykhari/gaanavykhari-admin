@@ -1,10 +1,3 @@
-export const SCHEDULE_FREQUENCIES = [
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'fortnightly', label: 'Fortnightly' },
-  { value: 'monthly', label: 'Monthly' },
-] as const;
-
 export const DAY_OPTIONS = [
   { value: '0', label: 'Sunday' },
   { value: '1', label: 'Monday' },
@@ -15,10 +8,15 @@ export const DAY_OPTIONS = [
   { value: '6', label: 'Saturday' },
 ] as const;
 
-export const MONTH_DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => ({
-  value: String(i + 1),
-  label: String(i + 1),
-}));
+export const DAY_LABELS: Record<string, string> = {
+  '0': 'Sun',
+  '1': 'Mon',
+  '2': 'Tue',
+  '3': 'Wed',
+  '4': 'Thu',
+  '5': 'Fri',
+  '6': 'Sat',
+};
 
 export const SESSION_STATUSES = [
   'scheduled',

@@ -30,30 +30,12 @@ export function isSessionScheduledForDate(
   }
 
   const dayOfWeek = checkDate.getDay();
-  const dayOfMonth = checkDate.getDate();
+  return String(dayOfWeek) in student.schedule;
+}
 
-  switch (student.schedule_frequency) {
-    case 'daily':
-      return true;
-
-    case 'weekly':
-      return student.schedule_days_of_week.includes(dayOfWeek);
-
-    case 'fortnightly':
-      if (!student.schedule_days_of_week.includes(dayOfWeek)) {
-        return false;
-      }
-      const weeksSinceInduction = Math.floor(
-        (checkDate.getTime() - induction.getTime()) / (1000 * 60 * 60 * 24 * 7)
-      );
-      return weeksSinceInduction % 2 === 0;
-
-    case 'monthly':
-      return student.schedule_days_of_month.includes(dayOfMonth);
-
-    default:
-      return false;
-  }
+export function getTimeForDate(student: Student, date: Date): string {
+  const dayOfWeek = date.getDay();
+  return student.schedule[String(dayOfWeek)] || '09:00';
 }
 
 export function getNextSessionDate(
@@ -61,45 +43,24 @@ export function getNextSessionDate(
   fromDate: Date = new Date(),
   holidays: Holiday[] = []
 ): Date | null {
-  const induction = new Date(student.induction_date);
-  const current = new Date(fromDate);
-
-  const startDate = new Date(Math.max(induction.getTime(), current.getTime()));
-
-  let nextDate: Date | null = null;
-
-  switch (student.schedule_frequency) {
-    case 'daily':
-      nextDate = addDays(startDate, 1);
-      break;
-    case 'weekly':
-      nextDate = getNextWeeklySession(startDate, student.schedule_days_of_week);
-      break;
-    case 'fortnightly':
-      nextDate = getNextFortnightlySession(
-        startDate,
-        student.schedule_days_of_week,
-        induction
-      );
-      break;
-    case 'monthly':
-      nextDate = getNextMonthlySession(
-        startDate,
-        student.schedule_days_of_month
-      );
-      break;
-    default:
-      return null;
+  if (!student.is_active || Object.keys(student.schedule).length === 0) {
+    return null;
   }
 
-  if (nextDate) {
-    const dateStr = nextDate.toISOString().split('T')[0]!;
-    if (holidays.some(h => dateStr >= h.from_date && dateStr <= h.to_date)) {
-      return getNextSessionDate(student, addDays(nextDate, 1), holidays);
+  const current = new Date(fromDate);
+  current.setHours(0, 0, 0, 0);
+
+  // Look ahead up to 60 days
+  for (let i = 1; i <= 60; i++) {
+    const checkDate = new Date(current);
+    checkDate.setDate(checkDate.getDate() + i);
+
+    if (isSessionScheduledForDate(student, checkDate, holidays)) {
+      return checkDate;
     }
   }
 
-  return nextDate;
+  return null;
 }
 
 export async function getHolidays(): Promise<Holiday[]> {
@@ -122,7 +83,7 @@ export async function getTodaysSchedule(
     if (isSessionScheduledForDate(student, today, holidays)) {
       todaysSchedule.push({
         student,
-        time: student.schedule_time,
+        time: getTimeForDate(student, today),
         status: 'scheduled',
       });
     }
@@ -148,7 +109,7 @@ export async function getUpcomingSessions(
       upcomingSessions.push({
         student,
         date: nextSessionDate.toISOString().split('T')[0]!,
-        time: student.schedule_time,
+        time: getTimeForDate(student, nextSessionDate),
         daysFromNow,
       });
     }
@@ -157,119 +118,4 @@ export async function getUpcomingSessions(
   return upcomingSessions
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, limit);
-}
-
-// Helper functions
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-function getNextWeeklySession(
-  fromDate: Date,
-  daysOfWeek: number[]
-): Date | null {
-  if (daysOfWeek.length === 0) {
-    return null;
-  }
-
-  const today = fromDate.getDay();
-  const sortedDays = [...daysOfWeek].sort((a, b) => a - b);
-
-  for (const day of sortedDays) {
-    if (day > today) {
-      const nextDate = new Date(fromDate);
-      nextDate.setDate(nextDate.getDate() + (day - today));
-      return nextDate;
-    }
-  }
-
-  const firstDayNextWeek = sortedDays[0];
-  if (firstDayNextWeek === undefined) {
-    return null;
-  }
-  const daysUntilNextWeek = 7 - today + firstDayNextWeek;
-  const nextDate = new Date(fromDate);
-  nextDate.setDate(nextDate.getDate() + daysUntilNextWeek);
-  return nextDate;
-}
-
-function getNextFortnightlySession(
-  fromDate: Date,
-  daysOfWeek: number[],
-  inductionDate: Date
-): Date | null {
-  if (daysOfWeek.length === 0) {
-    return null;
-  }
-
-  const weeksSinceInduction = Math.floor(
-    (fromDate.getTime() - inductionDate.getTime()) / (1000 * 60 * 60 * 24 * 7)
-  );
-  const isCurrentWeekScheduled = weeksSinceInduction % 2 === 0;
-
-  if (isCurrentWeekScheduled) {
-    const nextInCurrentWeek = getNextWeeklySession(fromDate, daysOfWeek);
-    if (nextInCurrentWeek && isSameWeek(nextInCurrentWeek, fromDate)) {
-      return nextInCurrentWeek;
-    }
-  }
-
-  const nextScheduledWeek = new Date(fromDate);
-  nextScheduledWeek.setDate(
-    nextScheduledWeek.getDate() + (isCurrentWeekScheduled ? 14 : 7)
-  );
-
-  const sortedDays = [...daysOfWeek].sort((a, b) => a - b);
-  const firstDayOfWeek = sortedDays[0];
-  if (firstDayOfWeek === undefined) {
-    return null;
-  }
-
-  const startOfWeek = new Date(nextScheduledWeek);
-  startOfWeek.setDate(
-    startOfWeek.getDate() - startOfWeek.getDay() + firstDayOfWeek
-  );
-  return startOfWeek;
-}
-
-function getNextMonthlySession(
-  fromDate: Date,
-  daysOfMonth: number[]
-): Date | null {
-  if (daysOfMonth.length === 0) {
-    return null;
-  }
-
-  const currentDay = fromDate.getDate();
-  const sortedDays = [...daysOfMonth].sort((a, b) => a - b);
-
-  for (const day of sortedDays) {
-    if (day > currentDay) {
-      const nextDate = new Date(fromDate);
-      nextDate.setDate(day);
-      return nextDate;
-    }
-  }
-
-  const firstDayNextMonth = sortedDays[0];
-  if (firstDayNextMonth === undefined) {
-    return null;
-  }
-  const nextDate = new Date(fromDate);
-  nextDate.setMonth(nextDate.getMonth() + 1, firstDayNextMonth);
-  return nextDate;
-}
-
-function isSameWeek(date1: Date, date2: Date): boolean {
-  const startOfWeek1 = new Date(date1);
-  startOfWeek1.setDate(startOfWeek1.getDate() - startOfWeek1.getDay());
-  startOfWeek1.setHours(0, 0, 0, 0);
-
-  const startOfWeek2 = new Date(date2);
-  startOfWeek2.setDate(startOfWeek2.getDate() - startOfWeek2.getDay());
-  startOfWeek2.setHours(0, 0, 0, 0);
-
-  return startOfWeek1.getTime() === startOfWeek2.getTime();
 }

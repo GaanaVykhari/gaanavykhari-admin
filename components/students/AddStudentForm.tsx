@@ -6,21 +6,18 @@ import {
   Modal,
   TextInput,
   NumberInput,
-  Select,
   Button,
   Stack,
   Group,
-  MultiSelect,
+  Checkbox,
+  Text,
 } from '@mantine/core';
 import { DateInput, TimeInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconUserPlus } from '@tabler/icons-react';
-import {
-  SCHEDULE_FREQUENCIES,
-  DAY_OPTIONS,
-  MONTH_DAY_OPTIONS,
-} from '@/lib/constants';
+import { DAY_OPTIONS } from '@/lib/constants';
+import type { WeeklySchedule } from '@/types';
 
 interface AddStudentFormProps {
   opened: boolean;
@@ -37,28 +34,43 @@ export default function AddStudentForm({
   const form = useForm({
     initialValues: {
       name: '',
-      email: '',
       phone: '',
-      fee_per_classes: 1,
+      email: '',
+      fee_per_classes: 4,
       fee_amount: 0,
-      schedule_frequency: 'weekly' as string,
-      schedule_days_of_week: [] as string[],
-      schedule_days_of_month: [] as string[],
-      schedule_time: '09:00',
+      schedule: {} as WeeklySchedule,
       induction_date: new Date(),
     },
     validate: {
       name: value =>
         value.length < 2 ? 'Name must be at least 2 characters' : null,
-      email: value => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
       phone: value =>
         value.length < 10 ? 'Phone must be at least 10 digits' : null,
       fee_amount: value =>
         value <= 0 ? 'Amount must be greater than 0' : null,
       fee_per_classes: value =>
         value <= 0 ? 'Number of classes must be greater than 0' : null,
+      schedule: value =>
+        Object.keys(value).length === 0 ? 'Select at least one day' : null,
     },
   });
+
+  const toggleDay = (day: string) => {
+    const current = { ...form.values.schedule };
+    if (day in current) {
+      delete current[day];
+    } else {
+      current[day] = '09:00';
+    }
+    form.setFieldValue('schedule', current);
+  };
+
+  const setDayTime = (day: string, time: string) => {
+    form.setFieldValue('schedule', {
+      ...form.values.schedule,
+      [day]: time,
+    });
+  };
 
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
@@ -68,8 +80,6 @@ export default function AddStudentForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...values,
-          schedule_days_of_week: values.schedule_days_of_week.map(Number),
-          schedule_days_of_month: values.schedule_days_of_month.map(Number),
           induction_date: values.induction_date.toISOString().split('T')[0],
         }),
       });
@@ -119,30 +129,27 @@ export default function AddStudentForm({
           />
 
           <TextInput
-            label="Email"
-            placeholder="Enter student's email"
-            required
-            {...form.getInputProps('email')}
-          />
-
-          <TextInput
             label="Phone Number"
-            placeholder="Enter student's phone number"
+            placeholder="+919876543210"
             required
             {...form.getInputProps('phone')}
           />
 
+          <TextInput
+            label="Email"
+            placeholder="Enter student's email (optional)"
+            {...form.getInputProps('email')}
+          />
+
           <Group grow>
             <NumberInput
-              label="Number of Classes"
-              placeholder="Number of classes"
+              label="Classes per Cycle"
               min={1}
               required
               {...form.getInputProps('fee_per_classes')}
             />
             <NumberInput
               label="Fee Amount (INR)"
-              placeholder="Fee amount"
               min={0}
               required
               {...form.getInputProps('fee_amount')}
@@ -156,41 +163,41 @@ export default function AddStudentForm({
             {...form.getInputProps('induction_date')}
           />
 
-          <Select
-            label="Schedule Frequency"
-            placeholder="Select frequency"
-            data={[...SCHEDULE_FREQUENCIES]}
-            required
-            {...form.getInputProps('schedule_frequency')}
-          />
-
-          {(form.values.schedule_frequency === 'weekly' ||
-            form.values.schedule_frequency === 'fortnightly') && (
-            <MultiSelect
-              label="Days of the Week"
-              placeholder="Select days"
-              data={[...DAY_OPTIONS]}
-              required
-              {...form.getInputProps('schedule_days_of_week')}
-            />
-          )}
-
-          {form.values.schedule_frequency === 'monthly' && (
-            <MultiSelect
-              label="Days of the Month"
-              placeholder="Select days"
-              data={MONTH_DAY_OPTIONS}
-              required
-              {...form.getInputProps('schedule_days_of_month')}
-            />
-          )}
-
-          <TimeInput
-            label="Class Time"
-            placeholder="Select time"
-            required
-            {...form.getInputProps('schedule_time')}
-          />
+          <div>
+            <Text size="sm" fw={500} mb="xs">
+              Weekly Schedule
+            </Text>
+            {form.errors.schedule && (
+              <Text size="xs" c="red" mb="xs">
+                {form.errors.schedule}
+              </Text>
+            )}
+            <Stack gap="xs">
+              {DAY_OPTIONS.map(day => {
+                const isSelected = day.value in form.values.schedule;
+                return (
+                  <Group key={day.value} gap="sm">
+                    <Checkbox
+                      label={day.label}
+                      checked={isSelected}
+                      onChange={() => toggleDay(day.value)}
+                      styles={{ label: { width: 100 } }}
+                    />
+                    {isSelected && (
+                      <TimeInput
+                        size="xs"
+                        value={form.values.schedule[day.value]}
+                        onChange={e =>
+                          setDayTime(day.value, e.currentTarget.value)
+                        }
+                        style={{ width: 120 }}
+                      />
+                    )}
+                  </Group>
+                );
+              })}
+            </Stack>
+          </div>
 
           <Group justify="flex-end" mt="md">
             <Button variant="subtle" onClick={onClose}>

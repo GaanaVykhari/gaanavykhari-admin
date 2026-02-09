@@ -19,13 +19,12 @@ import {
   IconCalendar,
   IconCreditCard,
   IconPhone,
-  IconMail,
   IconClock,
 } from '@tabler/icons-react';
 import EditStudentForm from '@/components/students/EditStudentForm';
 import SessionManager from '@/components/sessions/SessionManager';
 import { formatTime, formatShortDate, formatCurrency } from '@/lib/format';
-import { DAY_OPTIONS } from '@/lib/constants';
+import { DAY_LABELS } from '@/lib/constants';
 import type { Student } from '@/types';
 
 export default function StudentDetailPage({
@@ -74,11 +73,9 @@ export default function StudentDetailPage({
     );
   }
 
-  const getDayNames = (days: number[]) =>
-    days
-      .map(d => DAY_OPTIONS.find(opt => opt.value === String(d))?.label)
-      .filter(Boolean)
-      .join(', ');
+  const scheduleEntries = Object.entries(student.schedule || {}).sort(
+    ([a], [b]) => Number(a) - Number(b)
+  );
 
   return (
     <Container size="lg" py="md">
@@ -103,15 +100,9 @@ export default function StudentDetailPage({
 
           <Divider />
 
-          <Group gap="xl" wrap="wrap">
-            <Group gap="xs">
-              <IconMail size={16} color="var(--mantine-color-dimmed)" />
-              <Text size="sm">{student.email}</Text>
-            </Group>
-            <Group gap="xs">
-              <IconPhone size={16} color="var(--mantine-color-dimmed)" />
-              <Text size="sm">{student.phone}</Text>
-            </Group>
+          <Group gap="xs">
+            <IconPhone size={16} color="var(--mantine-color-dimmed)" />
+            <Text size="sm">{student.phone}</Text>
           </Group>
 
           <Group gap="xl" wrap="wrap">
@@ -124,47 +115,6 @@ export default function StudentDetailPage({
                 classes
               </Text>
             </div>
-            <div>
-              <Text size="xs" c="dimmed">
-                Schedule
-              </Text>
-              <Text fw={500}>
-                {student.schedule_frequency.charAt(0).toUpperCase() +
-                  student.schedule_frequency.slice(1)}
-              </Text>
-            </div>
-            <div>
-              <Text size="xs" c="dimmed">
-                Time
-              </Text>
-              <Group gap="xs">
-                <IconClock size={14} />
-                <Text fw={500}>{formatTime(student.schedule_time)}</Text>
-              </Group>
-            </div>
-          </Group>
-
-          {student.schedule_days_of_week.length > 0 && (
-            <div>
-              <Text size="xs" c="dimmed">
-                Days
-              </Text>
-              <Text size="sm">
-                {getDayNames(student.schedule_days_of_week)}
-              </Text>
-            </div>
-          )}
-
-          {student.schedule_days_of_month.length > 0 && (
-            <div>
-              <Text size="xs" c="dimmed">
-                Days of Month
-              </Text>
-              <Text size="sm">{student.schedule_days_of_month.join(', ')}</Text>
-            </div>
-          )}
-
-          <Group gap="xl" wrap="wrap">
             <div>
               <Text size="xs" c="dimmed">
                 Induction Date
@@ -182,6 +132,25 @@ export default function StudentDetailPage({
               </div>
             )}
           </Group>
+
+          {scheduleEntries.length > 0 && (
+            <div>
+              <Text size="xs" c="dimmed" mb={4}>
+                Weekly Schedule
+              </Text>
+              <Group gap="xs" wrap="wrap">
+                {scheduleEntries.map(([day, time]) => (
+                  <Badge key={day} variant="light" size="lg">
+                    <Group gap={4} wrap="nowrap">
+                      {DAY_LABELS[day] || day}
+                      <IconClock size={12} />
+                      {formatTime(time)}
+                    </Group>
+                  </Badge>
+                ))}
+              </Group>
+            </div>
+          )}
         </Stack>
       </Card>
 

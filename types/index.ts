@@ -7,13 +7,10 @@ export type {
   Holiday,
   Payment,
   PaymentWithStudent,
-  NotificationLog,
-  ScheduleFrequency,
+  WeeklySchedule,
   SessionStatus,
   PaymentStatus,
   PaymentMethod,
-  NotificationType,
-  NotificationStatus,
 } from './database';
 
 export type { ApiResponse, PaginatedData } from './api';

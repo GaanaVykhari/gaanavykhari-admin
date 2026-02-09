@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createPaymentLink } from '@/lib/razorpay';
-import { sendEmail } from '@/lib/resend';
-import { paymentLinkEmail } from '@/lib/email-templates/payment-link';
 import type { ApiResponse } from '@/types';
 
 export async function POST(
@@ -53,32 +51,9 @@ export async function POST(
       })
       .eq('id', id);
 
-    // Send email with payment link
-    const emailResult = await sendEmail({
-      to: student.email,
-      subject: `Payment Link - ${payment.amount} INR`,
-      html: paymentLinkEmail({
-        studentName: student.name,
-        amount: payment.amount,
-        dueDate: payment.due_date,
-        paymentUrl: link.short_url,
-      }),
-    });
-
-    // Log notification
-    await supabase.from('notification_log').insert({
-      recipient_email: student.email,
-      recipient_name: student.name,
-      subject: `Payment Link - ${payment.amount} INR`,
-      type: 'payment_link',
-      reference_id: id,
-      status: emailResult.success ? 'sent' : 'failed',
-      error_message: emailResult.error || null,
-    });
-
     return NextResponse.json({
       ok: true,
-      message: 'Payment link sent successfully',
+      message: 'Payment link created successfully',
       data: { link_url: link.short_url },
     } satisfies ApiResponse);
   } catch (err) {

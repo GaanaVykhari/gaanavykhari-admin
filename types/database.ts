@@ -1,18 +1,11 @@
-export type ScheduleFrequency = 'daily' | 'weekly' | 'fortnightly' | 'monthly';
-
 export type SessionStatus = 'scheduled' | 'attended' | 'canceled' | 'missed';
 
 export type PaymentStatus = 'pending' | 'paid' | 'overdue' | 'cancelled';
 
 export type PaymentMethod = 'cash' | 'upi' | 'razorpay';
 
-export type NotificationType =
-  | 'holiday_notification'
-  | 'session_cancellation'
-  | 'payment_link'
-  | 'payment_reminder';
-
-export type NotificationStatus = 'sent' | 'failed';
+// Map of day number (0=Sun, 1=Mon, ..., 6=Sat) to time string (HH:MM)
+export type WeeklySchedule = Record<string, string>;
 
 export interface Student {
   id: string;
@@ -21,10 +14,7 @@ export interface Student {
   email: string;
   fee_per_classes: number;
   fee_amount: number;
-  schedule_frequency: ScheduleFrequency;
-  schedule_days_of_week: number[];
-  schedule_days_of_month: number[];
-  schedule_time: string;
+  schedule: WeeklySchedule;
   induction_date: string;
   last_class_date: string | null;
   is_active: boolean;
@@ -40,7 +30,6 @@ export interface Session {
   status: SessionStatus;
   notes: string | null;
   canceled_reason: string | null;
-  notification_sent: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -54,7 +43,6 @@ export interface Holiday {
   from_date: string;
   to_date: string;
   description: string | null;
-  notification_sent: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -71,23 +59,10 @@ export interface Payment {
   razorpay_link_url: string | null;
   razorpay_payment_id: string | null;
   notes: string | null;
-  notification_sent: boolean;
   created_at: string;
   updated_at: string;
 }
 
 export interface PaymentWithStudent extends Payment {
   students: Pick<Student, 'id' | 'name' | 'email' | 'phone'>;
-}
-
-export interface NotificationLog {
-  id: string;
-  recipient_email: string;
-  recipient_name: string;
-  subject: string;
-  type: NotificationType;
-  reference_id: string | null;
-  status: NotificationStatus;
-  error_message: string | null;
-  sent_at: string;
 }

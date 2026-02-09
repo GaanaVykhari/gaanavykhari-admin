@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-Gaanavykhari Admin is a management app for a solo-run music school. A single teacher uses it to track students, sessions, payments, and holidays. Payments support cash, UPI, and Razorpay payment links. Email notifications are sent via Resend for session cancellations, holiday announcements, and payment links.
+Gaanavykhari Admin is a management app for a solo-run music school. A single teacher uses it to track students, sessions, payments, and holidays. Payments support cash, UPI, and Razorpay payment links.
 
 ## Development Commands
 
@@ -30,8 +30,7 @@ npm run type-check   # TypeScript type checking (tsc --noEmit)
 - **Supabase** (PostgreSQL + Auth + RLS) — clients in `lib/supabase/`
 - **Mantine v8** for UI components, forms, dates, notifications
 - **date-fns** for date manipulation
-- **Razorpay** for payment links
-- **Resend** for email notifications
+- **Razorpay** for payment links (lazy-initialized, optional)
 
 ## Architecture
 
@@ -41,22 +40,22 @@ Client components (`'use client'`) -> `fetch()` to API routes -> Supabase operat
 
 ### Key Directories
 
-- `app/api/` — Route handlers: `students/`, `sessions/`, `payments/`, `holidays/`, `dashboard/`, `schedule/`, `razorpay/`, `notifications/`, `health/`
+- `app/api/` — Route handlers: `students/`, `sessions/`, `payments/`, `holidays/`, `dashboard/`, `schedule/`, `razorpay/`, `health/`
 - `components/` — React components organized by feature: `layout/`, `students/`, `sessions/`, `payments/`, `holidays/`, `common/`
-- `lib/` — Server utilities: `supabase/` (client, server, admin), `razorpay.ts`, `resend.ts`, `schedule.ts`, `format.ts`, `constants.ts`, `email-templates/`
+- `lib/` — Server utilities: `supabase/` (client, server, admin), `razorpay.ts`, `schedule.ts`, `format.ts`, `constants.ts`
 - `hooks/` — Client hooks: `useAuth.ts`
 - `types/` — TypeScript types: `database.ts`, `api.ts`, `index.ts`
 
 ### Authentication
 
 - Supabase Auth with email/password login
-- `middleware.ts` checks `getUser()`, redirects unauthenticated users to `/login`
+- `proxy.ts` checks `getUser()`, redirects unauthenticated users to `/login`
 - Public routes: `/login`, `/_next`, `/api/razorpay/webhook`, `/api/health`, `/favicon`, `/manifest.json`
 - Users are created manually via Supabase dashboard
 
 ### Schedule System
 
-`lib/schedule.ts` handles recurring session generation with support for daily, weekly, fortnightly, and monthly frequencies. Holidays automatically skip overlapping sessions.
+`lib/schedule.ts` handles weekly session scheduling. Each student has a `schedule` field (JSONB) mapping day numbers (0=Sun..6=Sat) to time strings (HH:MM), allowing different times per day. Holidays automatically skip overlapping sessions.
 
 ### API Response Pattern
 
@@ -72,8 +71,7 @@ Required in `.env.local` (see `.env.example`):
 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase config
 - `SUPABASE_SERVICE_ROLE_KEY` — Supabase admin operations
-- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` — Razorpay
-- `RESEND_API_KEY`, `RESEND_FROM_EMAIL` — Resend email
+- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` — Razorpay (optional)
 - `NEXT_PUBLIC_APP_URL` — App URL
 
 ## Code Style
@@ -84,5 +82,9 @@ Required in `.env.local` (see `.env.example`):
 
 ## Supabase Schema
 
-Tables: `students`, `sessions`, `holidays`, `payments`, `notification_log`
+Tables: `students`, `sessions`, `holidays`, `payments`
 RLS: All tables allow all operations for authenticated users (single-teacher app).
+
+### Student Schedule Model
+
+The `students.schedule` column is JSONB storing a `WeeklySchedule` (TypeScript: `Record<string, string>`). Keys are day numbers ("0"=Sunday through "6"=Saturday), values are time strings ("HH:MM"). Example: `{"1": "16:30", "3": "16:30", "5": "17:00"}` means Mon/Wed at 4:30 PM and Fri at 5:00 PM.

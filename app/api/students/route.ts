@@ -72,18 +72,15 @@ export async function POST(request: NextRequest) {
       phone,
       fee_per_classes,
       fee_amount,
-      schedule_frequency,
-      schedule_days_of_week,
-      schedule_days_of_month,
-      schedule_time,
+      schedule,
       induction_date,
     } = body;
 
-    if (!name || !email || !phone) {
+    if (!name || !phone) {
       return NextResponse.json(
         {
           ok: false,
-          message: 'Name, email, and phone are required',
+          message: 'Name and phone are required',
         } satisfies ApiResponse,
         { status: 400 }
       );
@@ -93,14 +90,11 @@ export async function POST(request: NextRequest) {
       .from('students')
       .insert({
         name,
-        email,
+        email: email || '',
         phone,
         fee_per_classes: fee_per_classes || 1,
         fee_amount: fee_amount || 0,
-        schedule_frequency: schedule_frequency || 'weekly',
-        schedule_days_of_week: schedule_days_of_week || [],
-        schedule_days_of_month: schedule_days_of_month || [],
-        schedule_time: schedule_time || '09:00',
+        schedule: schedule || {},
         induction_date:
           induction_date || new Date().toISOString().split('T')[0],
         is_active: true,

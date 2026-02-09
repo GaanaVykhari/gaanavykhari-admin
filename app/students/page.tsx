@@ -15,15 +15,22 @@ import {
   SimpleGrid,
 } from '@mantine/core';
 import { useDisclosure, useDebouncedValue } from '@mantine/hooks';
-import {
-  IconSearch,
-  IconUserPlus,
-  IconPhone,
-  IconMail,
-} from '@tabler/icons-react';
+import { IconSearch, IconUserPlus, IconPhone } from '@tabler/icons-react';
 import AddStudentForm from '@/components/students/AddStudentForm';
 import { formatTime } from '@/lib/format';
+import { DAY_LABELS } from '@/lib/constants';
 import type { Student } from '@/types';
+
+function formatScheduleBadges(schedule: Record<string, string>) {
+  const entries = Object.entries(schedule).sort(
+    ([a], [b]) => Number(a) - Number(b)
+  );
+  return entries.map(([day, time]) => (
+    <Badge key={day} variant="outline" size="sm">
+      {DAY_LABELS[day] || day} {formatTime(time)}
+    </Badge>
+  ));
+}
 
 export default function StudentsPage() {
   const router = useRouter();
@@ -57,16 +64,6 @@ export default function StudentsPage() {
   useEffect(() => {
     loadStudents();
   }, [loadStudents]);
-
-  const frequencyLabel = (freq: string) => {
-    const labels: Record<string, string> = {
-      daily: 'Daily',
-      weekly: 'Weekly',
-      fortnightly: 'Fortnightly',
-      monthly: 'Monthly',
-    };
-    return labels[freq] || freq;
-  };
 
   return (
     <Container size="lg" py="md">
@@ -122,28 +119,15 @@ export default function StudentsPage() {
                 </Badge>
               </Group>
 
-              <Stack gap={4}>
-                <Group gap="xs">
-                  <IconMail size={14} color="var(--mantine-color-dimmed)" />
-                  <Text size="sm" c="dimmed">
-                    {student.email}
-                  </Text>
-                </Group>
-                <Group gap="xs">
-                  <IconPhone size={14} color="var(--mantine-color-dimmed)" />
-                  <Text size="sm" c="dimmed">
-                    {student.phone}
-                  </Text>
-                </Group>
-              </Stack>
+              <Group gap="xs">
+                <IconPhone size={14} color="var(--mantine-color-dimmed)" />
+                <Text size="sm" c="dimmed">
+                  {student.phone}
+                </Text>
+              </Group>
 
-              <Group mt="sm" gap="xs">
-                <Badge variant="outline" size="sm">
-                  {frequencyLabel(student.schedule_frequency)}
-                </Badge>
-                <Badge variant="outline" size="sm">
-                  {formatTime(student.schedule_time)}
-                </Badge>
+              <Group mt="sm" gap="xs" wrap="wrap">
+                {formatScheduleBadges(student.schedule || {})}
               </Group>
             </Card>
           ))}

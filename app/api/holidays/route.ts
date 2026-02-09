@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { sendEmail } from '@/lib/resend';
-import { holidayNotificationEmail } from '@/lib/email-templates/holiday-notification';
 import type { ApiResponse, Holiday } from '@/types';
 
 export async function GET() {
@@ -76,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Cancel overlapping sessions
-    const { data: canceledSessions } = await supabase
+    await supabase
       .from('sessions')
       .update({
         status: 'canceled',
@@ -84,41 +82,7 @@ export async function POST(request: NextRequest) {
       })
       .eq('status', 'scheduled')
       .gte('date', from_date)
-      .lte('date', to_date)
-      .select('*, students!inner(id, name, email)');
-
-    // Send email notifications (non-blocking)
-    if (canceledSessions && canceledSessions.length > 0) {
-      const notifiedStudents = new Set<string>();
-      for (const session of canceledSessions) {
-        const studentEmail = session.students?.email;
-        const studentName = session.students?.name;
-        if (studentEmail && !notifiedStudents.has(studentEmail)) {
-          notifiedStudents.add(studentEmail);
-          sendEmail({
-            to: studentEmail,
-            subject: `Class Canceled - ${description || 'Holiday'}`,
-            html: holidayNotificationEmail({
-              studentName: studentName || 'Student',
-              fromDate: from_date,
-              toDate: to_date,
-              description: description || 'Holiday',
-            }),
-          }).then(async result => {
-            // Log notification
-            await supabase.from('notification_log').insert({
-              recipient_email: studentEmail,
-              recipient_name: studentName || '',
-              subject: `Class Canceled - ${description || 'Holiday'}`,
-              type: 'holiday_notification',
-              reference_id: holiday.id,
-              status: result.success ? 'sent' : 'failed',
-              error_message: result.error || null,
-            });
-          });
-        }
-      }
-    }
+      .lte('date', to_date);
 
     return NextResponse.json(
       {
