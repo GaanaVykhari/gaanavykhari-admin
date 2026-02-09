@@ -34,6 +34,7 @@ import { StatsCard } from '@/components/common/StatsCard';
 import { SessionStatusBadge } from '@/components/common/StatusBadge';
 import { HolidayModal } from '@/components/holidays/HolidayModal';
 import { HolidayList } from '@/components/holidays/HolidayList';
+import { CancelRescheduleModal } from '@/components/sessions/CancelRescheduleModal';
 import {
   formatTime,
   formatShortDate,
@@ -59,6 +60,13 @@ export default function DashboardPage() {
     holidayModalOpened,
     { open: openHolidayModal, close: closeHolidayModal },
   ] = useDisclosure(false);
+  const [cancelTarget, setCancelTarget] = useState<{
+    studentName: string;
+    studentPhone: string;
+    studentId: string;
+    date: string;
+    time: string;
+  } | null>(null);
 
   const loadDashboard = async () => {
     setLoading(true);
@@ -304,11 +312,13 @@ export default function DashboardPage() {
                         color="yellow"
                         leftSection={<IconX size={12} />}
                         onClick={() =>
-                          handleStatusUpdate(
-                            entry.student.id,
-                            'canceled',
-                            entry.sessionId
-                          )
+                          setCancelTarget({
+                            studentName: entry.student.name,
+                            studentPhone: entry.student.phone,
+                            studentId: entry.student.id,
+                            date: new Date().toISOString().split('T')[0]!,
+                            time: entry.time,
+                          })
                         }
                       >
                         Cancel
@@ -367,12 +377,31 @@ export default function DashboardPage() {
                         <Text size="sm">{formatTime(session.time)}</Text>
                       </Group>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <Text size="sm">{formatShortDate(session.date)}</Text>
-                      <Badge variant="light" size="sm">
-                        {getRelativeDateString(session.date)}
-                      </Badge>
-                    </div>
+                    <Group gap="xs">
+                      <Button
+                        size="compact-xs"
+                        variant="light"
+                        color="yellow"
+                        leftSection={<IconX size={12} />}
+                        onClick={() =>
+                          setCancelTarget({
+                            studentName: session.student.name,
+                            studentPhone: session.student.phone,
+                            studentId: session.student.id,
+                            date: session.date,
+                            time: session.time,
+                          })
+                        }
+                      >
+                        Cancel
+                      </Button>
+                      <div style={{ textAlign: 'right' }}>
+                        <Text size="sm">{formatShortDate(session.date)}</Text>
+                        <Badge variant="light" size="sm">
+                          {getRelativeDateString(session.date)}
+                        </Badge>
+                      </div>
+                    </Group>
                   </Group>
                 </Card>
               ))}
@@ -392,6 +421,19 @@ export default function DashboardPage() {
         onClose={closeHolidayModal}
         onHolidayCreated={loadDashboard}
       />
+
+      {cancelTarget && (
+        <CancelRescheduleModal
+          opened={!!cancelTarget}
+          onClose={() => setCancelTarget(null)}
+          studentName={cancelTarget.studentName}
+          studentPhone={cancelTarget.studentPhone}
+          studentId={cancelTarget.studentId}
+          date={cancelTarget.date}
+          time={cancelTarget.time}
+          onCompleted={loadDashboard}
+        />
+      )}
     </Container>
   );
 }

@@ -27,6 +27,22 @@ export function getCancellationMessage(
   );
 }
 
+export function getRescheduleMessage(
+  studentName: string,
+  originalDate: string,
+  originalTime: string,
+  newDate: string,
+  newTime: string
+): string {
+  return (
+    `Hi ${studentName},\n\n` +
+    `This is to inform you that your music class scheduled for ` +
+    `${formatShortDate(originalDate)} at ${formatTime(originalTime)} ` +
+    `has been rescheduled to ${formatShortDate(newDate)} at ${formatTime(newTime)}.\n\n` +
+    `- GaanaVykhari`
+  );
+}
+
 export function getHolidayMessage(
   fromDate: string,
   toDate: string,

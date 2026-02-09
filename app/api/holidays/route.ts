@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import type { ApiResponse, Holiday } from '@/types';
+import type { ApiResponse, Holiday, Student } from '@/types';
+import { isSessionScheduledForDate, getTimeForDate } from '@/lib/schedule';
 
 export async function GET() {
   try {
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cancel overlapping sessions
+    // Cancel overlapping sessions already in DB
     await supabase
       .from('sessions')
       .update({
@@ -84,12 +85,13 @@ export async function POST(request: NextRequest) {
       .gte('date', from_date)
       .lte('date', to_date);
 
-    // Fetch active students for WhatsApp notification
-    const { data: activeStudents } = await supabase
-      .from('students')
-      .select('id, name, phone')
-      .eq('is_active', true)
-      .order('name', { ascending: true });
+    // Create canceled session records for schedule-computed sessions
+    const affectedStudents = await createCanceledSessionsForHoliday(
+      supabase,
+      from_date,
+      to_date,
+      description || 'Holiday'
+    );
 
     return NextResponse.json(
       {
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
         message: 'Holiday created successfully',
         data: {
           holiday,
-          affectedStudents: activeStudents || [],
+          affectedStudents,
         },
       } satisfies ApiResponse,
       { status: 201 }
@@ -112,4 +114,71 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+async function createCanceledSessionsForHoliday(
+  supabase: SupabaseClient,
+  fromDate: string,
+  toDate: string,
+  reason: string
+): Promise<{ id: string; name: string; phone: string }[]> {
+  // Fetch all active students
+  const { data: students } = await supabase
+    .from('students')
+    .select('*')
+    .eq('is_active', true);
+
+  if (!students || students.length === 0) {
+    return [];
+  }
+
+  const affectedMap = new Map<
+    string,
+    { id: string; name: string; phone: string }
+  >();
+
+  // Iterate each date in the holiday range
+  const current = new Date(fromDate);
+  const end = new Date(toDate);
+  current.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+
+  while (current <= end) {
+    const dateStr = current.toISOString().split('T')[0]!;
+
+    for (const student of students as Student[]) {
+      // Pass empty holidays so the holiday check doesn't skip
+      if (isSessionScheduledForDate(student, current, [])) {
+        // Check if a session already exists for this student+date
+        const { data: existing } = await supabase
+          .from('sessions')
+          .select('id')
+          .eq('student_id', student.id)
+          .eq('date', dateStr)
+          .limit(1);
+
+        if (!existing || existing.length === 0) {
+          await supabase.from('sessions').insert({
+            student_id: student.id,
+            date: dateStr,
+            time: getTimeForDate(student, current),
+            status: 'canceled',
+            canceled_reason: reason,
+          });
+        }
+
+        affectedMap.set(student.id, {
+          id: student.id,
+          name: student.name,
+          phone: student.phone,
+        });
+      }
+    }
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return Array.from(affectedMap.values());
 }

@@ -12,6 +12,7 @@ import {
   Badge,
   Modal,
   TextInput,
+  Menu,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -20,9 +21,14 @@ import {
   IconClock,
   IconTrash,
   IconPlus,
+  IconArrowsShuffle,
+  IconCheck,
+  IconX,
+  IconAlertCircle,
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { SessionStatusBadge } from '@/components/common/StatusBadge';
+import { CancelRescheduleModal } from '@/components/sessions/CancelRescheduleModal';
 import { formatTime } from '@/lib/format';
 import { DAY_LABELS } from '@/lib/constants';
 import { getWhatsAppUrl, getCancellationMessage } from '@/lib/whatsapp';
@@ -109,6 +115,11 @@ export default function SessionManager({
   const [loading, setLoading] = useState(false);
   const [addModalOpened, { open: openAddModal, close: closeAddModal }] =
     useDisclosure(false);
+  const [cancelTarget, setCancelTarget] = useState<{
+    date: string;
+    time: string;
+    sessionId?: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     student_id: studentId || '',
@@ -393,11 +404,10 @@ export default function SessionManager({
                             variant="light"
                             color="yellow"
                             onClick={() =>
-                              handleQuickRecord(
-                                entry.date,
-                                entry.time,
-                                'canceled'
-                              )
+                              setCancelTarget({
+                                date: entry.date,
+                                time: entry.time,
+                              })
                             }
                           >
                             Cancel
@@ -439,12 +449,11 @@ export default function SessionManager({
                             variant="light"
                             color="yellow"
                             onClick={() =>
-                              handleStatusUpdate(
-                                existing.id,
-                                'canceled',
-                                entry.date,
-                                entry.time
-                              )
+                              setCancelTarget({
+                                date: entry.date,
+                                time: entry.time,
+                                sessionId: existing.id,
+                              })
                             }
                           >
                             Cancel
@@ -502,14 +511,63 @@ export default function SessionManager({
                         </Text>
                       )}
                     </div>
-                    <ActionIcon
-                      variant="subtle"
-                      color="red"
-                      onClick={() => handleDelete(session.id)}
-                      title="Delete session"
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
+                    <Group gap="xs">
+                      <Menu shadow="md" width={180}>
+                        <Menu.Target>
+                          <ActionIcon
+                            variant="subtle"
+                            color="gray"
+                            title="Change status"
+                          >
+                            <IconArrowsShuffle size={16} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          {(['attended', 'canceled', 'missed'] as const)
+                            .filter(s => s !== session.status)
+                            .map(status => (
+                              <Menu.Item
+                                key={status}
+                                leftSection={
+                                  status === 'attended' ? (
+                                    <IconCheck size={14} />
+                                  ) : status === 'canceled' ? (
+                                    <IconX size={14} />
+                                  ) : (
+                                    <IconAlertCircle size={14} />
+                                  )
+                                }
+                                color={
+                                  status === 'attended'
+                                    ? 'green'
+                                    : status === 'canceled'
+                                      ? 'yellow'
+                                      : 'red'
+                                }
+                                onClick={() =>
+                                  handleStatusUpdate(
+                                    session.id,
+                                    status,
+                                    session.date,
+                                    session.time
+                                  )
+                                }
+                              >
+                                {status.charAt(0).toUpperCase() +
+                                  status.slice(1)}
+                              </Menu.Item>
+                            ))}
+                        </Menu.Dropdown>
+                      </Menu>
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        onClick={() => handleDelete(session.id)}
+                        title="Delete session"
+                      >
+                        <IconTrash size={16} />
+                      </ActionIcon>
+                    </Group>
                   </Group>
                 </Card>
               ))}
@@ -525,6 +583,23 @@ export default function SessionManager({
             </Card>
           )}
         </Stack>
+      )}
+
+      {student && cancelTarget && (
+        <CancelRescheduleModal
+          opened={!!cancelTarget}
+          onClose={() => setCancelTarget(null)}
+          studentName={student.name}
+          studentPhone={student.phone}
+          studentId={student.id}
+          date={cancelTarget.date}
+          time={cancelTarget.time}
+          sessionId={cancelTarget.sessionId}
+          onCompleted={() => {
+            loadSessions();
+            onSessionUpdated?.();
+          }}
+        />
       )}
 
       <Modal
