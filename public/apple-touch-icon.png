@@ -1,0 +1,4 @@
+# This is a placeholder for apple-touch-icon.png
+# In a real implementation, this would be a 180x180 PNG file with the graduation cap design
+# For now, we'll use the SVG icon which is supported by modern browsers
+# The graduation cap design from icon.svg is now used as favicon.svg

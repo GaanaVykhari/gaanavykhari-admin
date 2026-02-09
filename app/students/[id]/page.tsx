@@ -1,0 +1,220 @@
+'use client';
+
+import { useState, useEffect, use } from 'react';
+import {
+  Container,
+  Title,
+  Card,
+  Text,
+  Group,
+  Stack,
+  Badge,
+  Button,
+  Tabs,
+  Divider,
+} from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import {
+  IconEdit,
+  IconCalendar,
+  IconCreditCard,
+  IconPhone,
+  IconMail,
+  IconClock,
+} from '@tabler/icons-react';
+import EditStudentForm from '@/components/students/EditStudentForm';
+import SessionManager from '@/components/sessions/SessionManager';
+import { formatTime, formatShortDate, formatCurrency } from '@/lib/format';
+import { DAY_OPTIONS } from '@/lib/constants';
+import type { Student } from '@/types';
+
+export default function StudentDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const [student, setStudent] = useState<Student | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editOpened, { open: openEdit, close: closeEdit }] =
+    useDisclosure(false);
+
+  const loadStudent = async () => {
+    try {
+      const response = await fetch(`/api/students/${id}`);
+      const data = await response.json();
+      if (data.ok) {
+        setStudent(data.data);
+      }
+    } catch {
+      // Error handled silently
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStudent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Container size="lg" py="md">
+        <Text c="dimmed">Loading student...</Text>
+      </Container>
+    );
+  }
+
+  if (!student) {
+    return (
+      <Container size="lg" py="md">
+        <Text c="dimmed">Student not found</Text>
+      </Container>
+    );
+  }
+
+  const getDayNames = (days: number[]) =>
+    days
+      .map(d => DAY_OPTIONS.find(opt => opt.value === String(d))?.label)
+      .filter(Boolean)
+      .join(', ');
+
+  return (
+    <Container size="lg" py="md">
+      <Group justify="space-between" mb="lg">
+        <Title order={2}>{student.name}</Title>
+        <Button
+          leftSection={<IconEdit size={16} />}
+          variant="light"
+          onClick={openEdit}
+        >
+          Edit
+        </Button>
+      </Group>
+
+      <Card withBorder mb="lg" padding="lg">
+        <Stack gap="sm">
+          <Group>
+            <Badge color={student.is_active ? 'green' : 'gray'} variant="light">
+              {student.is_active ? 'Active' : 'Inactive'}
+            </Badge>
+          </Group>
+
+          <Divider />
+
+          <Group gap="xl" wrap="wrap">
+            <Group gap="xs">
+              <IconMail size={16} color="var(--mantine-color-dimmed)" />
+              <Text size="sm">{student.email}</Text>
+            </Group>
+            <Group gap="xs">
+              <IconPhone size={16} color="var(--mantine-color-dimmed)" />
+              <Text size="sm">{student.phone}</Text>
+            </Group>
+          </Group>
+
+          <Group gap="xl" wrap="wrap">
+            <div>
+              <Text size="xs" c="dimmed">
+                Fee
+              </Text>
+              <Text fw={500}>
+                {formatCurrency(student.fee_amount)} / {student.fee_per_classes}{' '}
+                classes
+              </Text>
+            </div>
+            <div>
+              <Text size="xs" c="dimmed">
+                Schedule
+              </Text>
+              <Text fw={500}>
+                {student.schedule_frequency.charAt(0).toUpperCase() +
+                  student.schedule_frequency.slice(1)}
+              </Text>
+            </div>
+            <div>
+              <Text size="xs" c="dimmed">
+                Time
+              </Text>
+              <Group gap="xs">
+                <IconClock size={14} />
+                <Text fw={500}>{formatTime(student.schedule_time)}</Text>
+              </Group>
+            </div>
+          </Group>
+
+          {student.schedule_days_of_week.length > 0 && (
+            <div>
+              <Text size="xs" c="dimmed">
+                Days
+              </Text>
+              <Text size="sm">
+                {getDayNames(student.schedule_days_of_week)}
+              </Text>
+            </div>
+          )}
+
+          {student.schedule_days_of_month.length > 0 && (
+            <div>
+              <Text size="xs" c="dimmed">
+                Days of Month
+              </Text>
+              <Text size="sm">{student.schedule_days_of_month.join(', ')}</Text>
+            </div>
+          )}
+
+          <Group gap="xl" wrap="wrap">
+            <div>
+              <Text size="xs" c="dimmed">
+                Induction Date
+              </Text>
+              <Text size="sm">{formatShortDate(student.induction_date)}</Text>
+            </div>
+            {student.last_class_date && (
+              <div>
+                <Text size="xs" c="dimmed">
+                  Last Class
+                </Text>
+                <Text size="sm">
+                  {formatShortDate(student.last_class_date)}
+                </Text>
+              </div>
+            )}
+          </Group>
+        </Stack>
+      </Card>
+
+      <Tabs defaultValue="sessions">
+        <Tabs.List>
+          <Tabs.Tab value="sessions" leftSection={<IconCalendar size={16} />}>
+            Sessions
+          </Tabs.Tab>
+          <Tabs.Tab value="payments" leftSection={<IconCreditCard size={16} />}>
+            Payments
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="sessions" pt="md">
+          <SessionManager
+            studentId={student.id}
+            onSessionUpdated={loadStudent}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="payments" pt="md">
+          <Text c="dimmed">Payment history for {student.name}</Text>
+        </Tabs.Panel>
+      </Tabs>
+
+      <EditStudentForm
+        opened={editOpened}
+        onClose={() => {
+          closeEdit();
+          loadStudent();
+        }}
+        student={student}
+      />
+    </Container>
+  );
+}
