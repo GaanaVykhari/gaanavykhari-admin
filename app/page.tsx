@@ -12,7 +12,7 @@ import {
   Stack,
   Button,
   Badge,
-  Divider,
+  Anchor,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -236,7 +236,14 @@ export default function DashboardPage() {
                 <Card key={entry.student.id} withBorder padding="sm">
                   <Group justify="space-between" mb="xs">
                     <div>
-                      <Text fw={500}>{entry.student.name}</Text>
+                      <Anchor
+                        fw={500}
+                        href={`/students/${entry.student.id}`}
+                        underline="hover"
+                        c="var(--mantine-color-text)"
+                      >
+                        {entry.student.name}
+                      </Anchor>
                       <Group gap="xs" c="dimmed">
                         <IconClock size={14} />
                         <Text size="sm">{formatTime(entry.time)}</Text>
@@ -305,7 +312,14 @@ export default function DashboardPage() {
                 >
                   <Group justify="space-between">
                     <div>
-                      <Text fw={500}>{session.student.name}</Text>
+                      <Anchor
+                        fw={500}
+                        href={`/students/${session.student.id}`}
+                        underline="hover"
+                        c="var(--mantine-color-text)"
+                      >
+                        {session.student.name}
+                      </Anchor>
                       <Group gap="xs" c="dimmed">
                         <IconClock size={14} />
                         <Text size="sm">{formatTime(session.time)}</Text>
