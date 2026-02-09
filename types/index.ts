@@ -20,6 +20,8 @@ export interface ScheduleEntry {
   time: string;
   status: SessionStatus;
   sessionId?: string;
+  paymentDue?: boolean;
+  classesSincePayment?: number;
 }
 
 export interface UpcomingSession {
@@ -27,6 +29,8 @@ export interface UpcomingSession {
   date: string;
   time: string;
   daysFromNow: number;
+  paymentDue?: boolean;
+  classesSincePayment?: number;
 }
 
 export interface DashboardStats {

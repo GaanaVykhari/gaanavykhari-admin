@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getUpcomingSessions } from '@/lib/schedule';
+import { getUpcomingSessions, getPaymentDueMap } from '@/lib/schedule';
 import type { ApiResponse, UpcomingSession } from '@/types';
 
 export async function GET(request: NextRequest) {
@@ -24,10 +24,21 @@ export async function GET(request: NextRequest) {
 
     const upcoming = await getUpcomingSessions(students, limit);
 
+    // Get payment due status
+    const studentIds = upcoming.map(u => u.student.id);
+    const paymentMap = await getPaymentDueMap(studentIds);
+
+    const upcomingWithPayment = upcoming.map(entry => ({
+      ...entry,
+      paymentDue: paymentMap.get(entry.student.id)?.paymentDue || false,
+      classesSincePayment:
+        paymentMap.get(entry.student.id)?.classesSincePayment || 0,
+    }));
+
     return NextResponse.json({
       ok: true,
       message: 'Upcoming sessions fetched successfully',
-      data: upcoming,
+      data: upcomingWithPayment,
     } satisfies ApiResponse<UpcomingSession[]>);
   } catch (err) {
     return NextResponse.json(

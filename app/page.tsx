@@ -13,6 +13,7 @@ import {
   Button,
   Badge,
   Anchor,
+  Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -236,14 +237,26 @@ export default function DashboardPage() {
                 <Card key={entry.student.id} withBorder padding="sm">
                   <Group justify="space-between" mb="xs">
                     <div>
-                      <Anchor
-                        fw={500}
-                        href={`/students/${entry.student.id}`}
-                        underline="hover"
-                        c="var(--mantine-color-text)"
-                      >
-                        {entry.student.name}
-                      </Anchor>
+                      <Group gap="xs">
+                        <Anchor
+                          fw={500}
+                          href={`/students/${entry.student.id}`}
+                          underline="hover"
+                          c="var(--mantine-color-text)"
+                        >
+                          {entry.student.name}
+                        </Anchor>
+                        {entry.paymentDue && (
+                          <Tooltip
+                            label={`Payment due (${entry.classesSincePayment}/${entry.student.fee_per_classes} classes attended)`}
+                          >
+                            <IconCreditCard
+                              size={16}
+                              color="var(--mantine-color-red-6)"
+                            />
+                          </Tooltip>
+                        )}
+                      </Group>
                       <Group gap="xs" c="dimmed">
                         <IconClock size={14} />
                         <Text size="sm">{formatTime(entry.time)}</Text>
@@ -312,14 +325,26 @@ export default function DashboardPage() {
                 >
                   <Group justify="space-between">
                     <div>
-                      <Anchor
-                        fw={500}
-                        href={`/students/${session.student.id}`}
-                        underline="hover"
-                        c="var(--mantine-color-text)"
-                      >
-                        {session.student.name}
-                      </Anchor>
+                      <Group gap="xs">
+                        <Anchor
+                          fw={500}
+                          href={`/students/${session.student.id}`}
+                          underline="hover"
+                          c="var(--mantine-color-text)"
+                        >
+                          {session.student.name}
+                        </Anchor>
+                        {session.paymentDue && (
+                          <Tooltip
+                            label={`Payment due (${session.classesSincePayment}/${session.student.fee_per_classes} classes attended)`}
+                          >
+                            <IconCreditCard
+                              size={16}
+                              color="var(--mantine-color-red-6)"
+                            />
+                          </Tooltip>
+                        )}
+                      </Group>
                       <Group gap="xs" c="dimmed">
                         <IconClock size={14} />
                         <Text size="sm">{formatTime(session.time)}</Text>

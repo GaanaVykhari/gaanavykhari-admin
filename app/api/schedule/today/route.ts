@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getTodaysSchedule } from '@/lib/schedule';
+import { getTodaysSchedule, getPaymentDueMap } from '@/lib/schedule';
 import type { ApiResponse, ScheduleEntry } from '@/types';
 
 export async function GET() {
@@ -28,19 +28,22 @@ export async function GET() {
       .select('*')
       .eq('date', today);
 
-    // Merge existing session statuses
+    // Get payment due status for all students in today's schedule
+    const studentIds = schedule.map(e => e.student.id);
+    const paymentMap = await getPaymentDueMap(studentIds);
+
+    // Merge existing session statuses and payment info
     const mergedSchedule = schedule.map(entry => {
       const existing = existingSessions?.find(
         s => s.student_id === entry.student.id
       );
-      if (existing) {
-        return {
-          ...entry,
-          status: existing.status,
-          sessionId: existing.id,
-        };
-      }
-      return entry;
+      const payment = paymentMap.get(entry.student.id);
+      return {
+        ...entry,
+        ...(existing && { status: existing.status, sessionId: existing.id }),
+        paymentDue: payment?.paymentDue || false,
+        classesSincePayment: payment?.classesSincePayment || 0,
+      };
     });
 
     return NextResponse.json({
