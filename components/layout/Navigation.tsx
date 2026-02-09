@@ -110,6 +110,7 @@ export default function Navigation({
               {user?.email}
             </Text>
             <ThemeToggle />
+            <LogoutButton compact />
           </Group>
         </Group>
       </AppShell.Header>
@@ -157,8 +158,16 @@ export default function Navigation({
   );
 }
 
-function LogoutButton() {
+function LogoutButton({ compact }: { compact?: boolean }) {
   const { signOut } = useAuth();
+
+  if (compact) {
+    return (
+      <ActionIcon variant="subtle" color="red" onClick={signOut} title="Logout">
+        <IconLogout size={18} />
+      </ActionIcon>
+    );
+  }
 
   return (
     <Button

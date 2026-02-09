@@ -195,7 +195,7 @@ export default function DashboardPage() {
         <Button
           leftSection={<IconPlus size={16} />}
           size="sm"
-          onClick={() => router.push('/students')}
+          onClick={() => router.push('/students?action=add')}
         >
           Add Student
         </Button>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
           leftSection={<IconCreditCard size={16} />}
           size="sm"
           variant="light"
-          onClick={() => router.push('/payments')}
+          onClick={() => router.push('/payments?action=add')}
         >
           Record Payment
         </Button>

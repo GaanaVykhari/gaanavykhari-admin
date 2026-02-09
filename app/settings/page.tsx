@@ -62,31 +62,32 @@ export default function SettingsPage() {
               onChange={value =>
                 setColorScheme(value as 'light' | 'dark' | 'auto')
               }
+              fullWidth
               data={[
                 {
                   value: 'light',
                   label: (
-                    <Group gap="xs" justify="center">
+                    <Group gap={6} justify="center" wrap="nowrap">
                       <IconSun size={16} />
-                      <Text size="sm">Light</Text>
+                      <span>Light</span>
                     </Group>
                   ),
                 },
                 {
                   value: 'dark',
                   label: (
-                    <Group gap="xs" justify="center">
+                    <Group gap={6} justify="center" wrap="nowrap">
                       <IconMoon size={16} />
-                      <Text size="sm">Dark</Text>
+                      <span>Dark</span>
                     </Group>
                   ),
                 },
                 {
                   value: 'auto',
                   label: (
-                    <Group gap="xs" justify="center">
+                    <Group gap={6} justify="center" wrap="nowrap">
                       <IconDeviceDesktop size={16} />
-                      <Text size="sm">System</Text>
+                      <span>System</span>
                     </Group>
                   ),
                 },

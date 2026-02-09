@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Container,
   Title,
@@ -37,6 +38,7 @@ interface PaymentRow {
 }
 
 export default function PaymentsPage() {
+  const searchParams = useSearchParams();
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ export default function PaymentsPage() {
   const [debouncedSearch] = useDebouncedValue(search, 300);
   const [sendingLink, setSendingLink] = useState<string | null>(null);
   const [addModalOpened, { open: openAddModal, close: closeAddModal }] =
-    useDisclosure(false);
+    useDisclosure(searchParams.get('action') === 'add');
 
   const [formData, setFormData] = useState({
     student_id: '',

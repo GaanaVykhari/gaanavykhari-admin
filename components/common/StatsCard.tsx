@@ -20,7 +20,7 @@ export function StatsCard({
 }: StatsCardProps) {
   return (
     <Paper withBorder p="md" radius="md">
-      <Group justify="space-between">
+      <Group justify="space-between" align="center">
         <div>
           <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
             {title}

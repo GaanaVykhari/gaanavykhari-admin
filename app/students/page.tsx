@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Container,
   Title,
@@ -27,12 +27,13 @@ import type { Student } from '@/types';
 
 export default function StudentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebouncedValue(search, 300);
   const [addModalOpened, { open: openAddModal, close: closeAddModal }] =
-    useDisclosure(false);
+    useDisclosure(searchParams.get('action') === 'add');
 
   const loadStudents = useCallback(async () => {
     setLoading(true);
