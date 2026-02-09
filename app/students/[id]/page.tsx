@@ -167,6 +167,7 @@ export default function StudentDetailPage({
         <Tabs.Panel value="sessions" pt="md">
           <SessionManager
             studentId={student.id}
+            student={student}
             onSessionUpdated={loadStudent}
           />
         </Tabs.Panel>
