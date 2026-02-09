@@ -199,7 +199,11 @@ export function CancelRescheduleModal({
     }
   );
 
-  const canConfirmReschedule = !reschedule || (newDateStr && newTime);
+  const hasConflict =
+    reschedule && newDateStr && dayEntries.some(e => e.studentId === studentId);
+
+  const canConfirmReschedule =
+    !reschedule || (newDateStr && newTime && !hasConflict);
 
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -255,6 +259,16 @@ export function CancelRescheduleModal({
               </Alert>
             )}
 
+            {hasConflict && (
+              <Alert
+                icon={<IconAlertTriangle size={16} />}
+                color="red"
+                variant="light"
+              >
+                {studentName} already has a session on this date.
+              </Alert>
+            )}
+
             {newDateStr && (
               <Stack gap="xs">
                 <Text size="sm" fw={500}>
@@ -270,19 +284,47 @@ export function CancelRescheduleModal({
                   </Text>
                 ) : (
                   <Stack gap={4}>
-                    {dayEntries.map((entry, i) => (
-                      <Group key={i} gap="xs">
-                        <IconClock size={14} />
-                        <Text size="sm">
-                          {formatTime(entry.time)} — {entry.studentName}
-                        </Text>
-                        {entry.source === 'adhoc' && (
-                          <Badge size="xs" variant="light">
-                            adhoc
-                          </Badge>
-                        )}
-                      </Group>
-                    ))}
+                    {dayEntries.map((entry, i) => {
+                      const isConflict = entry.studentId === studentId;
+                      return (
+                        <Group
+                          key={i}
+                          gap="xs"
+                          style={
+                            isConflict
+                              ? {
+                                  background: 'var(--mantine-color-red-light)',
+                                  borderRadius: 4,
+                                  padding: '2px 6px',
+                                  margin: '0 -6px',
+                                }
+                              : undefined
+                          }
+                        >
+                          <IconClock
+                            size={14}
+                            color={
+                              isConflict
+                                ? 'var(--mantine-color-red-6)'
+                                : undefined
+                            }
+                          />
+                          <Text
+                            size="sm"
+                            c={isConflict ? 'red' : undefined}
+                            fw={isConflict ? 600 : undefined}
+                          >
+                            {formatTime(entry.time)} — {entry.studentName}
+                            {isConflict && ' (conflict)'}
+                          </Text>
+                          {entry.source === 'adhoc' && (
+                            <Badge size="xs" variant="light">
+                              adhoc
+                            </Badge>
+                          )}
+                        </Group>
+                      );
+                    })}
                   </Stack>
                 )}
               </Stack>

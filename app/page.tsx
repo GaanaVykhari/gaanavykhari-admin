@@ -377,31 +377,31 @@ export default function DashboardPage() {
                         <Text size="sm">{formatTime(session.time)}</Text>
                       </Group>
                     </div>
-                    <Group gap="xs">
-                      <Button
-                        size="compact-xs"
-                        variant="light"
-                        color="yellow"
-                        leftSection={<IconX size={12} />}
-                        onClick={() =>
-                          setCancelTarget({
-                            studentName: session.student.name,
-                            studentPhone: session.student.phone,
-                            studentId: session.student.id,
-                            date: session.date,
-                            time: session.time,
-                          })
-                        }
-                      >
-                        Cancel
-                      </Button>
-                      <div style={{ textAlign: 'right' }}>
-                        <Text size="sm">{formatShortDate(session.date)}</Text>
+                    <div style={{ textAlign: 'right' }}>
+                      <Text size="sm">{formatShortDate(session.date)}</Text>
+                      <Group gap="xs" justify="flex-end">
+                        <Button
+                          size="compact-xs"
+                          variant="light"
+                          color="yellow"
+                          leftSection={<IconX size={12} />}
+                          onClick={() =>
+                            setCancelTarget({
+                              studentName: session.student.name,
+                              studentPhone: session.student.phone,
+                              studentId: session.student.id,
+                              date: session.date,
+                              time: session.time,
+                            })
+                          }
+                        >
+                          Cancel
+                        </Button>
                         <Badge variant="light" size="sm">
                           {getRelativeDateString(session.date)}
                         </Badge>
-                      </div>
-                    </Group>
+                      </Group>
+                    </div>
                   </Group>
                 </Card>
               ))}
