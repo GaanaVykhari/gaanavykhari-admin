@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toLocalDateStr } from '@/lib/format';
 import { useRouter } from 'next/navigation';
 import {
   Modal,
@@ -108,7 +109,7 @@ export default function EditStudentForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...values,
-          induction_date: values.induction_date.toISOString().split('T')[0],
+          induction_date: toLocalDateStr(values.induction_date),
         }),
       });
 

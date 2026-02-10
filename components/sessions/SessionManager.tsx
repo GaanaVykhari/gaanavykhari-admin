@@ -26,13 +26,19 @@ import {
   IconX,
   IconAlertCircle,
 } from '@tabler/icons-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { SessionStatusBadge } from '@/components/common/StatusBadge';
+import { SessionCardSkeleton } from '@/components/common/Skeletons';
 import { CancelRescheduleModal } from '@/components/sessions/CancelRescheduleModal';
-import { formatTime } from '@/lib/format';
+import { formatTime, toLocalDateStr, parseLocalDate } from '@/lib/format';
 import { DAY_LABELS } from '@/lib/constants';
 import { getWhatsAppUrl, getCancellationMessage } from '@/lib/whatsapp';
 import type { Student, Holiday, SessionStatus } from '@/types';
+
+function safeFormatDate(dateStr: string, fmt: string): string {
+  const d = parseLocalDate(dateStr);
+  return isValid(d) ? format(d, fmt) : dateStr;
+}
 
 interface SessionData {
   id: string;
@@ -66,10 +72,9 @@ function getUpcomingDates(
   const entries: UpcomingEntry[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0]!;
+  const todayStr = toLocalDateStr(today);
 
-  const induction = new Date(student.induction_date);
-  induction.setHours(0, 0, 0, 0);
+  const induction = parseLocalDate(student.induction_date);
 
   for (let i = 0; entries.length < count && i <= 60; i++) {
     const d = new Date(today);
@@ -86,7 +91,7 @@ function getUpcomingDates(
       continue;
     }
 
-    const dateStr = d.toISOString().split('T')[0]!;
+    const dateStr = toLocalDateStr(d);
     const isHoliday = holidays.some(
       h => dateStr >= h.from_date && dateStr <= h.to_date
     );
@@ -123,7 +128,7 @@ export default function SessionManager({
 
   const [formData, setFormData] = useState({
     student_id: studentId || '',
-    date: new Date().toISOString().split('T')[0] || '',
+    date: toLocalDateStr(new Date()),
     time: '09:00',
     notes: '',
   });
@@ -184,7 +189,7 @@ export default function SessionManager({
   }, [student, holidays, sessions]);
 
   const pastSessions = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0]!;
+    const todayStr = toLocalDateStr(new Date());
     const upcomingDates = new Set(upcoming.map(u => u.date));
     return sessions.filter(
       s =>
@@ -205,7 +210,7 @@ export default function SessionManager({
         closeAddModal();
         setFormData({
           student_id: studentId || '',
-          date: new Date().toISOString().split('T')[0] || '',
+          date: toLocalDateStr(new Date()),
           time: '09:00',
           notes: '',
         });
@@ -331,9 +336,7 @@ export default function SessionManager({
       </Group>
 
       {loading ? (
-        <Text c="dimmed" ta="center" py="xl">
-          Loading sessions...
-        </Text>
+        <SessionCardSkeleton count={3} />
       ) : (
         <Stack gap="md">
           {/* Upcoming scheduled sessions */}
@@ -360,10 +363,7 @@ export default function SessionManager({
                         <Group gap="md" mb="xs">
                           <Text fw={500}>
                             {entry.dayLabel},{' '}
-                            {format(
-                              new Date(entry.date + 'T00:00:00'),
-                              'MMM dd'
-                            )}
+                            {safeFormatDate(entry.date, 'MMM dd')}
                           </Text>
                           {entry.isToday && (
                             <Badge color="blue" variant="filled" size="sm">
@@ -494,10 +494,7 @@ export default function SessionManager({
                         <Group gap="xs">
                           <IconCalendar size={14} />
                           <Text size="sm">
-                            {format(
-                              new Date(session.date + 'T00:00:00'),
-                              'MMM dd, yyyy'
-                            )}
+                            {safeFormatDate(session.date, 'MMM dd, yyyy')}
                           </Text>
                         </Group>
                         <Group gap="xs">

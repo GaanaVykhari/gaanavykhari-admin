@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getTodaysSchedule, getPaymentDueMap } from '@/lib/schedule';
+import { toLocalDateStr } from '@/lib/format';
 import type { ApiResponse, ScheduleEntry } from '@/types';
 
 export async function GET() {
@@ -22,7 +23,7 @@ export async function GET() {
     const schedule = await getTodaysSchedule(students);
 
     // Check for existing sessions today
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr(new Date());
     const { data: existingSessions } = await supabase
       .from('sessions')
       .select('*')

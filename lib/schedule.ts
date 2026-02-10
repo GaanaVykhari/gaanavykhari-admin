@@ -1,5 +1,6 @@
 import type { Student, Holiday, ScheduleEntry, UpcomingSession } from '@/types';
 import { createClient } from '@/lib/supabase/server';
+import { toLocalDateStr } from '@/lib/format';
 
 export function isSessionScheduledForDate(
   student: Student,
@@ -20,7 +21,7 @@ export function isSessionScheduledForDate(
     return false;
   }
 
-  const dateStr = checkDate.toISOString().split('T')[0]!;
+  const dateStr = toLocalDateStr(checkDate);
   if (
     holidays.some(h => {
       return dateStr >= h.from_date && dateStr <= h.to_date;
@@ -80,13 +81,19 @@ export async function getPaymentDueMap(
 
   const supabase = await createClient();
 
-  // Fetch last paid payment date per student
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('student_id, paid_date')
-    .in('student_id', studentIds)
-    .eq('status', 'paid')
-    .order('paid_date', { ascending: false });
+  // Batch: fetch last paid payment date per student + fee info
+  const [{ data: payments }, { data: students }] = await Promise.all([
+    supabase
+      .from('payments')
+      .select('student_id, paid_date')
+      .in('student_id', studentIds)
+      .eq('status', 'paid')
+      .order('paid_date', { ascending: false }),
+    supabase
+      .from('students')
+      .select('id, fee_per_classes')
+      .in('id', studentIds),
+  ]);
 
   const lastPaidDate = new Map<string, string>();
   for (const p of payments || []) {
@@ -95,38 +102,45 @@ export async function getPaymentDueMap(
     }
   }
 
-  // Fetch attended session counts since last payment per student
-  // We need to do this per student since each has a different cutoff date
-  const countPromises = studentIds.map(async id => {
-    let query = supabase
-      .from('sessions')
-      .select('id', { count: 'exact', head: true })
-      .eq('student_id', id)
-      .eq('status', 'attended');
-
-    const paidDate = lastPaidDate.get(id);
-    if (paidDate) {
-      query = query.gt('date', paidDate.split('T')[0]);
+  // Find the earliest cutoff date across all students
+  let earliestCutoff: string | null = null;
+  for (const date of lastPaidDate.values()) {
+    const dateStr = date.split('T')[0]!;
+    if (!earliestCutoff || dateStr < earliestCutoff) {
+      earliestCutoff = dateStr;
     }
+  }
 
-    const { count } = await query;
-    return { id, count: count || 0 };
-  });
+  // Batch: fetch ALL attended sessions for these students since earliest cutoff
+  let sessionsQuery = supabase
+    .from('sessions')
+    .select('student_id, date')
+    .in('student_id', studentIds)
+    .eq('status', 'attended');
 
-  const counts = await Promise.all(countPromises);
+  if (earliestCutoff) {
+    sessionsQuery = sessionsQuery.gt('date', earliestCutoff);
+  }
 
-  // Fetch fee_per_classes for each student
-  const { data: students } = await supabase
-    .from('students')
-    .select('id, fee_per_classes')
-    .in('id', studentIds);
+  const { data: sessions } = await sessionsQuery;
+
+  // Count sessions per student (only those after their own cutoff)
+  const countMap = new Map<string, number>();
+  for (const s of sessions || []) {
+    const cutoff = lastPaidDate.get(s.student_id)?.split('T')[0];
+    if (cutoff && s.date <= cutoff) {
+      continue;
+    }
+    countMap.set(s.student_id, (countMap.get(s.student_id) || 0) + 1);
+  }
 
   const feeMap = new Map<string, number>();
   for (const s of students || []) {
     feeMap.set(s.id, s.fee_per_classes);
   }
 
-  for (const { id, count } of counts) {
+  for (const id of studentIds) {
+    const count = countMap.get(id) || 0;
     const feePerClasses = feeMap.get(id) || 4;
     result.set(id, {
       paymentDue: count >= feePerClasses,
@@ -182,7 +196,7 @@ export async function getUpcomingSessions(
       );
       upcomingSessions.push({
         student,
-        date: nextSessionDate.toISOString().split('T')[0]!,
+        date: toLocalDateStr(nextSessionDate),
         time: getTimeForDate(student, nextSessionDate),
         daysFromNow,
       });

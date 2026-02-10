@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { ApiResponse, Holiday, Student } from '@/types';
 import { isSessionScheduledForDate, getTimeForDate } from '@/lib/schedule';
+import { toLocalDateStr, parseLocalDate } from '@/lib/format';
 
 export async function GET() {
   try {
@@ -139,36 +140,30 @@ async function createCanceledSessionsForHoliday(
     { id: string; name: string; phone: string }
   >();
 
-  // Iterate each date in the holiday range
-  const current = new Date(fromDate);
-  const end = new Date(toDate);
-  current.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
+  // Collect all (studentId, date) pairs that need sessions
+  const toCreate: {
+    student_id: string;
+    date: string;
+    time: string;
+    status: 'canceled';
+    canceled_reason: string;
+  }[] = [];
+
+  const current = parseLocalDate(fromDate);
+  const end = parseLocalDate(toDate);
 
   while (current <= end) {
-    const dateStr = current.toISOString().split('T')[0]!;
+    const dateStr = toLocalDateStr(current);
 
     for (const student of students as Student[]) {
-      // Pass empty holidays so the holiday check doesn't skip
       if (isSessionScheduledForDate(student, current, [])) {
-        // Check if a session already exists for this student+date
-        const { data: existing } = await supabase
-          .from('sessions')
-          .select('id')
-          .eq('student_id', student.id)
-          .eq('date', dateStr)
-          .limit(1);
-
-        if (!existing || existing.length === 0) {
-          await supabase.from('sessions').insert({
-            student_id: student.id,
-            date: dateStr,
-            time: getTimeForDate(student, current),
-            status: 'canceled',
-            canceled_reason: reason,
-          });
-        }
-
+        toCreate.push({
+          student_id: student.id,
+          date: dateStr,
+          time: getTimeForDate(student, current),
+          status: 'canceled',
+          canceled_reason: reason,
+        });
         affectedMap.set(student.id, {
           id: student.id,
           name: student.name,
@@ -178,6 +173,33 @@ async function createCanceledSessionsForHoliday(
     }
 
     current.setDate(current.getDate() + 1);
+  }
+
+  if (toCreate.length === 0) {
+    return [];
+  }
+
+  // Batch-fetch all existing sessions in the date range for affected students
+  const affectedStudentIds = Array.from(affectedMap.keys());
+  const { data: existingSessions } = await supabase
+    .from('sessions')
+    .select('student_id, date')
+    .in('student_id', affectedStudentIds)
+    .gte('date', fromDate)
+    .lte('date', toDate);
+
+  const existingSet = new Set(
+    (existingSessions || []).map(s => `${s.student_id}:${s.date}`)
+  );
+
+  // Filter out sessions that already exist
+  const newSessions = toCreate.filter(
+    s => !existingSet.has(`${s.student_id}:${s.date}`)
+  );
+
+  // Batch-insert all new canceled sessions
+  if (newSessions.length > 0) {
+    await supabase.from('sessions').insert(newSessions);
   }
 
   return Array.from(affectedMap.values());

@@ -1,3 +1,27 @@
+/**
+ * Format a Date as YYYY-MM-DD using local timezone (not UTC).
+ * Avoids the date-shift bug where toISOString().split('T')[0]
+ * returns the previous day in timezones ahead of UTC.
+ */
+export function toLocalDateStr(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Parse a YYYY-MM-DD string as local midnight.
+ * new Date("2026-02-13") parses as UTC midnight, which shifts
+ * to the previous day in IST. This parses as local midnight.
+ */
+export function parseLocalDate(dateStr: string): Date {
+  // Handle full ISO timestamps by taking only the date part
+  const datePart = dateStr.split('T')[0]!;
+  const [year, month, day] = datePart.split('-').map(Number);
+  return new Date(year!, month! - 1, day!);
+}
+
 export function formatTime(time: string): string {
   try {
     const [hours, minutes] = time.split(':');
@@ -17,7 +41,7 @@ export function formatTime(time: string): string {
 }
 
 export function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === 'string' ? parseLocalDate(date) : date;
   return d.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -27,7 +51,7 @@ export function formatDate(date: Date | string): string {
 }
 
 export function formatShortDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === 'string' ? parseLocalDate(date) : date;
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -39,8 +63,8 @@ export function formatDateRange(
   from: Date | string,
   to: Date | string
 ): string {
-  const fromDate = typeof from === 'string' ? new Date(from) : from;
-  const toDate = typeof to === 'string' ? new Date(to) : to;
+  const fromDate = typeof from === 'string' ? parseLocalDate(from) : from;
+  const toDate = typeof to === 'string' ? parseLocalDate(to) : to;
 
   if (fromDate.toDateString() === toDate.toDateString()) {
     return formatShortDate(fromDate);
@@ -53,7 +77,8 @@ export function getRelativeDateString(date: Date | string): string {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const targetDate = typeof date === 'string' ? new Date(date) : new Date(date);
+  const targetDate =
+    typeof date === 'string' ? parseLocalDate(date) : new Date(date);
   targetDate.setHours(0, 0, 0, 0);
 
   const diffInDays = Math.ceil(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Title,
@@ -15,45 +15,49 @@ import {
 import { notifications } from '@mantine/notifications';
 import { IconCalendar, IconClock, IconCheck, IconX } from '@tabler/icons-react';
 import { SessionStatusBadge } from '@/components/common/StatusBadge';
+import { ScheduleCardSkeleton } from '@/components/common/Skeletons';
 import {
   formatTime,
   formatShortDate,
   getRelativeDateString,
+  toLocalDateStr,
 } from '@/lib/format';
 import type { ScheduleEntry, UpcomingSession } from '@/types';
 
 export default function SchedulePage() {
   const [todaySchedule, setTodaySchedule] = useState<ScheduleEntry[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingSession[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [todayLoading, setTodayLoading] = useState(true);
+  const [upcomingLoading, setUpcomingLoading] = useState(true);
 
-  const loadSchedule = async () => {
-    setLoading(true);
-    try {
-      const [todayRes, upcomingRes] = await Promise.all([
-        fetch('/api/schedule/today'),
-        fetch('/api/schedule/upcoming?limit=10'),
-      ]);
-      const [todayData, upcomingData] = await Promise.all([
-        todayRes.json(),
-        upcomingRes.json(),
-      ]);
-      if (todayData.ok) {
-        setTodaySchedule(todayData.data);
-      }
-      if (upcomingData.ok) {
-        setUpcoming(upcomingData.data);
-      }
-    } catch {
-      // Error handled silently
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadSchedule = useCallback(async () => {
+    setTodayLoading(true);
+    setUpcomingLoading(true);
+
+    fetch('/api/schedule/today')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          setTodaySchedule(data.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setTodayLoading(false));
+
+    fetch('/api/schedule/upcoming?limit=10')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          setUpcoming(data.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setUpcomingLoading(false));
+  }, []);
 
   useEffect(() => {
     loadSchedule();
-  }, []);
+  }, [loadSchedule]);
 
   const handleStatusUpdate = async (
     studentId: string,
@@ -68,7 +72,7 @@ export default function SchedulePage() {
           body: JSON.stringify({ status }),
         });
       } else {
-        const today = new Date().toISOString().split('T')[0];
+        const today = toLocalDateStr(new Date());
         const entry = todaySchedule.find(e => e.student.id === studentId);
         await fetch('/api/sessions', {
           method: 'POST',
@@ -96,14 +100,6 @@ export default function SchedulePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <Container size="lg" py="md">
-        <Text c="dimmed">Loading schedule...</Text>
-      </Container>
-    );
-  }
-
   return (
     <Container size="lg" py="md">
       <Title order={2} mb="lg">
@@ -114,7 +110,9 @@ export default function SchedulePage() {
       <Title order={3} mb="md">
         Today&apos;s Classes
       </Title>
-      {todaySchedule.length === 0 ? (
+      {todayLoading ? (
+        <ScheduleCardSkeleton count={3} />
+      ) : todaySchedule.length === 0 ? (
         <Card withBorder p="xl" mb="xl">
           <Stack align="center" gap="md">
             <IconCalendar size={48} color="var(--mantine-color-gray-5)" />
@@ -200,7 +198,9 @@ export default function SchedulePage() {
       <Title order={3} mb="md">
         Upcoming Sessions
       </Title>
-      {upcoming.length === 0 ? (
+      {upcomingLoading ? (
+        <ScheduleCardSkeleton count={4} />
+      ) : upcoming.length === 0 ? (
         <Card withBorder p="xl">
           <Text c="dimmed" ta="center">
             No upcoming sessions

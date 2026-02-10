@@ -73,9 +73,12 @@ CREATE TABLE payments (
 CREATE INDEX idx_sessions_student_id ON sessions(student_id);
 CREATE INDEX idx_sessions_date ON sessions(date);
 CREATE INDEX idx_sessions_status ON sessions(status);
+CREATE INDEX idx_sessions_student_date ON sessions(student_id, date);
+CREATE INDEX idx_sessions_student_status ON sessions(student_id, status);
 CREATE INDEX idx_payments_student_id ON payments(student_id);
 CREATE INDEX idx_payments_status ON payments(status);
 CREATE INDEX idx_payments_due_date ON payments(due_date);
+CREATE INDEX idx_payments_student_status_paid ON payments(student_id, status, paid_date);
 CREATE INDEX idx_holidays_dates ON holidays(from_date, to_date);
 CREATE INDEX idx_students_is_active ON students(is_active);
 

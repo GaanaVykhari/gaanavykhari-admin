@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { toLocalDateStr } from '@/lib/format';
 import type { ApiResponse, PaginatedData, Student } from '@/types';
 
 export async function GET(request: NextRequest) {
@@ -95,8 +96,7 @@ export async function POST(request: NextRequest) {
         fee_per_classes: fee_per_classes || 1,
         fee_amount: fee_amount || 0,
         schedule: schedule || {},
-        induction_date:
-          induction_date || new Date().toISOString().split('T')[0],
+        induction_date: induction_date || toLocalDateStr(new Date()),
         is_active: true,
       })
       .select()

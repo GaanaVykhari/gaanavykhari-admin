@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toLocalDateStr } from '@/lib/format';
 import {
   Modal,
   Button,
@@ -73,8 +74,8 @@ export function HolidayModal({
 
     setLoading(true);
     try {
-      const fromStr = fromDate.toISOString().split('T')[0]!;
-      const toStr = toDate.toISOString().split('T')[0]!;
+      const fromStr = toLocalDateStr(fromDate);
+      const toStr = toLocalDateStr(toDate);
 
       const response = await fetch('/api/holidays', {
         method: 'POST',

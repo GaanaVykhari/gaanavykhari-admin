@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toLocalDateStr } from '@/lib/format';
 import {
   Modal,
   TextInput,
@@ -80,7 +81,7 @@ export default function AddStudentForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...values,
-          induction_date: values.induction_date.toISOString().split('T')[0],
+          induction_date: toLocalDateStr(values.induction_date),
         }),
       });
 

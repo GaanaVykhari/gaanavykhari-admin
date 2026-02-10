@@ -25,6 +25,7 @@ import {
 } from '@tabler/icons-react';
 import EditStudentForm from '@/components/students/EditStudentForm';
 import SessionManager from '@/components/sessions/SessionManager';
+import { StudentDetailSkeleton } from '@/components/common/Skeletons';
 import { formatTime, formatShortDate, formatCurrency } from '@/lib/format';
 import { DAY_LABELS } from '@/lib/constants';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
@@ -63,7 +64,7 @@ export default function StudentDetailPage({
   if (loading) {
     return (
       <Container size="lg" py="md">
-        <Text c="dimmed">Loading student...</Text>
+        <StudentDetailSkeleton />
       </Container>
     );
   }

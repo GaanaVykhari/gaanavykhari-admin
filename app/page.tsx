@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Container,
@@ -31,6 +31,10 @@ import {
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { StatsCard } from '@/components/common/StatsCard';
+import {
+  StatsCardsSkeleton,
+  ScheduleCardSkeleton,
+} from '@/components/common/Skeletons';
 import { SessionStatusBadge } from '@/components/common/StatusBadge';
 import { HolidayModal } from '@/components/holidays/HolidayModal';
 import { HolidayList } from '@/components/holidays/HolidayList';
@@ -40,6 +44,7 @@ import {
   formatShortDate,
   formatCurrency,
   getRelativeDateString,
+  toLocalDateStr,
 } from '@/lib/format';
 import { getWhatsAppUrl, getCancellationMessage } from '@/lib/whatsapp';
 import type {
@@ -55,7 +60,10 @@ export default function DashboardPage() {
   const [todaySchedule, setTodaySchedule] = useState<ScheduleEntry[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingSession[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [todayLoading, setTodayLoading] = useState(true);
+  const [upcomingLoading, setUpcomingLoading] = useState(true);
+  const [holidaysLoading, setHolidaysLoading] = useState(true);
   const [
     holidayModalOpened,
     { open: openHolidayModal, close: closeHolidayModal },
@@ -68,45 +76,56 @@ export default function DashboardPage() {
     time: string;
   } | null>(null);
 
-  const loadDashboard = async () => {
-    setLoading(true);
-    try {
-      const [statsRes, todayRes, upcomingRes, holidaysRes] = await Promise.all([
-        fetch('/api/dashboard/stats'),
-        fetch('/api/schedule/today'),
-        fetch('/api/schedule/upcoming?limit=5'),
-        fetch('/api/holidays'),
-      ]);
-      const [statsData, todayData, upcomingData, holidaysData] =
-        await Promise.all([
-          statsRes.json(),
-          todayRes.json(),
-          upcomingRes.json(),
-          holidaysRes.json(),
-        ]);
+  const loadDashboard = useCallback(async () => {
+    setStatsLoading(true);
+    setTodayLoading(true);
+    setUpcomingLoading(true);
+    setHolidaysLoading(true);
 
-      if (statsData.ok) {
-        setStats(statsData.data);
-      }
-      if (todayData.ok) {
-        setTodaySchedule(todayData.data);
-      }
-      if (upcomingData.ok) {
-        setUpcoming(upcomingData.data);
-      }
-      if (holidaysData.ok) {
-        setHolidays(holidaysData.data);
-      }
-    } catch {
-      // Error handled silently
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetch('/api/dashboard/stats')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          setStats(data.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setStatsLoading(false));
+
+    fetch('/api/schedule/today')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          setTodaySchedule(data.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setTodayLoading(false));
+
+    fetch('/api/schedule/upcoming?limit=5')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          setUpcoming(data.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setUpcomingLoading(false));
+
+    fetch('/api/holidays')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          setHolidays(data.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setHolidaysLoading(false));
+  }, []);
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [loadDashboard]);
 
   const handleStatusUpdate = async (
     studentId: string,
@@ -121,7 +140,7 @@ export default function DashboardPage() {
           body: JSON.stringify({ status }),
         });
       } else {
-        const today = new Date().toISOString().split('T')[0];
+        const today = toLocalDateStr(new Date());
         const entry = todaySchedule.find(e => e.student.id === studentId);
         await fetch('/api/sessions', {
           method: 'POST',
@@ -144,7 +163,7 @@ export default function DashboardPage() {
       if (status === 'canceled') {
         const entry = todaySchedule.find(e => e.student.id === studentId);
         if (entry) {
-          const today = new Date().toISOString().split('T')[0]!;
+          const today = toLocalDateStr(new Date());
           const msg = getCancellationMessage(
             entry.student.name,
             today,
@@ -164,14 +183,6 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <Container size="lg" py="md">
-        <Text c="dimmed">Loading dashboard...</Text>
-      </Container>
-    );
-  }
-
   return (
     <Container size="lg" py="md">
       <Title order={2} mb="lg">
@@ -179,7 +190,9 @@ export default function DashboardPage() {
       </Title>
 
       {/* Stats Cards */}
-      {stats && (
+      {statsLoading ? (
+        <StatsCardsSkeleton />
+      ) : stats ? (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="xl">
           <StatsCard
             title="Active Students"
@@ -214,7 +227,7 @@ export default function DashboardPage() {
             }
           />
         </SimpleGrid>
-      )}
+      ) : null}
 
       {/* Quick Actions */}
       <Group mb="xl" gap="sm">
@@ -250,7 +263,9 @@ export default function DashboardPage() {
           <Title order={3} mb="md">
             Today&apos;s Classes
           </Title>
-          {todaySchedule.length === 0 ? (
+          {todayLoading ? (
+            <ScheduleCardSkeleton count={2} />
+          ) : todaySchedule.length === 0 ? (
             <Card withBorder p="lg">
               <Text c="dimmed" ta="center">
                 No classes today
@@ -316,7 +331,7 @@ export default function DashboardPage() {
                             studentName: entry.student.name,
                             studentPhone: entry.student.phone,
                             studentId: entry.student.id,
-                            date: new Date().toISOString().split('T')[0]!,
+                            date: toLocalDateStr(new Date()),
                             time: entry.time,
                           })
                         }
@@ -336,7 +351,9 @@ export default function DashboardPage() {
           <Title order={3} mb="md">
             Upcoming Sessions
           </Title>
-          {upcoming.length === 0 ? (
+          {upcomingLoading ? (
+            <ScheduleCardSkeleton count={3} />
+          ) : upcoming.length === 0 ? (
             <Card withBorder p="lg">
               <Text c="dimmed" ta="center">
                 No upcoming sessions

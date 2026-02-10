@@ -22,6 +22,7 @@ import {
   IconBrandWhatsapp,
 } from '@tabler/icons-react';
 import AddStudentForm from '@/components/students/AddStudentForm';
+import { StudentCardSkeleton } from '@/components/common/Skeletons';
 import { formatTime } from '@/lib/format';
 import { DAY_LABELS } from '@/lib/constants';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
@@ -89,9 +90,7 @@ export default function StudentsPage() {
       />
 
       {loading ? (
-        <Text c="dimmed" ta="center" py="xl">
-          Loading students...
-        </Text>
+        <StudentCardSkeleton count={6} />
       ) : students.length === 0 ? (
         <Card withBorder p="xl">
           <Stack align="center" gap="md">

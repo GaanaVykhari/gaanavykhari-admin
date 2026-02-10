@@ -21,7 +21,8 @@ import { useDisclosure, useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconSearch, IconPlus, IconSend, IconCash } from '@tabler/icons-react';
 import { PaymentStatusBadge } from '@/components/common/StatusBadge';
-import { formatShortDate, formatCurrency } from '@/lib/format';
+import { PaymentCardSkeleton } from '@/components/common/Skeletons';
+import { formatShortDate, formatCurrency, toLocalDateStr } from '@/lib/format';
 import type { Student, PaymentStatus } from '@/types';
 
 interface PaymentRow {
@@ -116,7 +117,7 @@ export default function PaymentsPage() {
         body: JSON.stringify({
           student_id: formData.student_id,
           amount: formData.amount,
-          due_date: formData.due_date.toISOString().split('T')[0],
+          due_date: toLocalDateStr(formData.due_date),
           notes: formData.notes || null,
         }),
       });
@@ -231,9 +232,7 @@ export default function PaymentsPage() {
       </Group>
 
       {loading ? (
-        <Text c="dimmed" ta="center" py="xl">
-          Loading payments...
-        </Text>
+        <PaymentCardSkeleton count={4} />
       ) : payments.length === 0 ? (
         <Card withBorder p="xl">
           <Stack align="center" gap="md">

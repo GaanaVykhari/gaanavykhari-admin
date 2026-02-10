@@ -20,7 +20,7 @@ import {
   IconClock,
   IconAlertTriangle,
 } from '@tabler/icons-react';
-import { formatTime } from '@/lib/format';
+import { formatTime, parseLocalDate, toLocalDateStr } from '@/lib/format';
 import {
   getWhatsAppUrl,
   getCancellationMessage,
@@ -133,7 +133,7 @@ export function CancelRescheduleModal({
 
       // 2. Create rescheduled session if applicable
       if (reschedule && newDateStr && newTime) {
-        const originalDateObj = new Date(date + 'T00:00:00');
+        const originalDateObj = parseLocalDate(date);
         const shortOriginal = originalDateObj.toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
@@ -190,14 +190,11 @@ export function CancelRescheduleModal({
     }
   };
 
-  const originalDateDisplay = new Date(date + 'T00:00:00').toLocaleDateString(
-    'en-US',
-    {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    }
-  );
+  const originalDateDisplay = parseLocalDate(date).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
 
   const hasConflict =
     reschedule && newDateStr && dayEntries.some(e => e.studentId === studentId);
@@ -205,8 +202,7 @@ export function CancelRescheduleModal({
   const canConfirmReschedule =
     !reschedule || (newDateStr && newTime && !hasConflict);
 
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const todayStr = toLocalDateStr(new Date());
 
   return (
     <Modal
