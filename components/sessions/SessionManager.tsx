@@ -610,27 +610,36 @@ export default function SessionManager({
             label="Date"
             type="date"
             value={formData.date}
-            onChange={e =>
-              setFormData(prev => ({ ...prev, date: e.currentTarget.value }))
-            }
+            onChange={e => {
+              const val = e.currentTarget?.value;
+              if (val != null) {
+                setFormData(prev => ({ ...prev, date: val }));
+              }
+            }}
             required
           />
           <TextInput
             label="Time"
             type="time"
             value={formData.time}
-            onChange={e =>
-              setFormData(prev => ({ ...prev, time: e.currentTarget.value }))
-            }
+            onChange={e => {
+              const val = e.currentTarget?.value;
+              if (val != null) {
+                setFormData(prev => ({ ...prev, time: val }));
+              }
+            }}
             required
           />
           <TextInput
             label="Notes (Optional)"
             placeholder="Add any notes"
             value={formData.notes}
-            onChange={e =>
-              setFormData(prev => ({ ...prev, notes: e.currentTarget.value }))
-            }
+            onChange={e => {
+              const val = e.currentTarget?.value;
+              if (val != null) {
+                setFormData(prev => ({ ...prev, notes: val }));
+              }
+            }}
           />
           <Group justify="flex-end" mt="md">
             <Button variant="subtle" onClick={closeAddModal}>

@@ -242,7 +242,12 @@ export function CancelRescheduleModal({
               label="New Time"
               placeholder="Pick a time"
               value={newTime}
-              onChange={e => setNewTime(e.currentTarget.value)}
+              onChange={e => {
+                const val = e.currentTarget?.value;
+                if (val != null) {
+                  setNewTime(val);
+                }
+              }}
             />
 
             {isHolidayDate && (
