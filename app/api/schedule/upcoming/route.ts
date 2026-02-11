@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     const upcomingWithPayment = upcoming.map(entry => ({
       ...entry,
-      paymentDue: paymentMap.get(entry.student.id)?.paymentDue || false,
+      paymentStatus: paymentMap.get(entry.student.id)?.paymentStatus || 'none',
       classesSincePayment:
         paymentMap.get(entry.student.id)?.classesSincePayment || 0,
     }));

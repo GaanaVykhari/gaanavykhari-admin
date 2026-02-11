@@ -1,14 +1,14 @@
 'use client';
 
-import { Badge } from '@mantine/core';
+import { Badge, Tooltip } from '@mantine/core';
 import {
   IconCheck,
   IconX,
   IconAlertCircle,
   IconClock,
-  IconCurrency,
+  IconCreditCard,
 } from '@tabler/icons-react';
-import type { SessionStatus, PaymentStatus } from '@/types';
+import type { SessionStatus, PaymentStatus, PaymentIndicator } from '@/types';
 
 const sessionColors: Record<SessionStatus, string> = {
   attended: 'green',
@@ -60,4 +60,36 @@ export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </Badge>
   );
+}
+
+export function PaymentBadge({
+  status,
+  count,
+  total,
+}: {
+  status?: PaymentIndicator;
+  count?: number;
+  total?: number;
+}) {
+  if (!status || status === 'none') {
+    return null;
+  }
+
+  const label =
+    count != null && total != null
+      ? `${count}/${total} classes attended since last payment`
+      : undefined;
+
+  const badge = (
+    <Badge
+      size="xs"
+      color={status === 'overdue' ? 'red' : 'yellow'}
+      variant="light"
+      leftSection={<IconCreditCard size={12} />}
+    >
+      {status === 'overdue' ? 'Payment overdue' : 'Payment due'}
+    </Badge>
+  );
+
+  return label ? <Tooltip label={label}>{badge}</Tooltip> : badge;
 }

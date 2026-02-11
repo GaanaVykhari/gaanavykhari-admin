@@ -13,7 +13,6 @@ import {
   Button,
   Badge,
   Anchor,
-  Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -35,7 +34,10 @@ import {
   StatsCardsSkeleton,
   ScheduleCardSkeleton,
 } from '@/components/common/Skeletons';
-import { SessionStatusBadge } from '@/components/common/StatusBadge';
+import {
+  SessionStatusBadge,
+  PaymentBadge,
+} from '@/components/common/StatusBadge';
 import { HolidayModal } from '@/components/holidays/HolidayModal';
 import { HolidayList } from '@/components/holidays/HolidayList';
 import { CancelRescheduleModal } from '@/components/sessions/CancelRescheduleModal';
@@ -286,16 +288,11 @@ export default function DashboardPage() {
                         >
                           {entry.student.name}
                         </Anchor>
-                        {entry.paymentDue && (
-                          <Tooltip
-                            label={`Payment due (${entry.classesSincePayment}/${entry.student.fee_per_classes} classes attended)`}
-                          >
-                            <IconCreditCard
-                              size={16}
-                              color="var(--mantine-color-red-6)"
-                            />
-                          </Tooltip>
-                        )}
+                        <PaymentBadge
+                          status={entry.paymentStatus}
+                          count={entry.classesSincePayment}
+                          total={entry.student.fee_per_classes}
+                        />
                       </Group>
                       <Group gap="xs" c="dimmed">
                         <IconClock size={14} />
@@ -378,16 +375,11 @@ export default function DashboardPage() {
                         >
                           {session.student.name}
                         </Anchor>
-                        {session.paymentDue && (
-                          <Tooltip
-                            label={`Payment due (${session.classesSincePayment}/${session.student.fee_per_classes} classes attended)`}
-                          >
-                            <IconCreditCard
-                              size={16}
-                              color="var(--mantine-color-red-6)"
-                            />
-                          </Tooltip>
-                        )}
+                        <PaymentBadge
+                          status={session.paymentStatus}
+                          count={session.classesSincePayment}
+                          total={session.student.fee_per_classes}
+                        />
                       </Group>
                       <Group gap="xs" c="dimmed">
                         <IconClock size={14} />

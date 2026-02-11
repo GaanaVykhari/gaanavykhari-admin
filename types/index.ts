@@ -15,12 +15,14 @@ export type {
 
 export type { ApiResponse, PaginatedData } from './api';
 
+export type PaymentIndicator = 'none' | 'due' | 'overdue';
+
 export interface ScheduleEntry {
   student: Student;
   time: string;
   status: SessionStatus;
   sessionId?: string;
-  paymentDue?: boolean;
+  paymentStatus?: PaymentIndicator;
   classesSincePayment?: number;
 }
 
@@ -29,7 +31,7 @@ export interface UpcomingSession {
   date: string;
   time: string;
   daysFromNow: number;
-  paymentDue?: boolean;
+  paymentStatus?: PaymentIndicator;
   classesSincePayment?: number;
 }
 

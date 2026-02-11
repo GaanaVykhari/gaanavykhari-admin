@@ -1,4 +1,10 @@
-import type { Student, Holiday, ScheduleEntry, UpcomingSession } from '@/types';
+import type {
+  Student,
+  Holiday,
+  ScheduleEntry,
+  UpcomingSession,
+  PaymentIndicator,
+} from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import { toLocalDateStr } from '@/lib/format';
 
@@ -70,10 +76,12 @@ export function getNextSessionDate(
  */
 export async function getPaymentDueMap(
   studentIds: string[]
-): Promise<Map<string, { paymentDue: boolean; classesSincePayment: number }>> {
+): Promise<
+  Map<string, { paymentStatus: PaymentIndicator; classesSincePayment: number }>
+> {
   const result = new Map<
     string,
-    { paymentDue: boolean; classesSincePayment: number }
+    { paymentStatus: PaymentIndicator; classesSincePayment: number }
   >();
   if (studentIds.length === 0) {
     return result;
@@ -142,8 +150,14 @@ export async function getPaymentDueMap(
   for (const id of studentIds) {
     const count = countMap.get(id) || 0;
     const feePerClasses = feeMap.get(id) || 4;
+    let paymentStatus: PaymentIndicator = 'none';
+    if (count > feePerClasses) {
+      paymentStatus = 'overdue';
+    } else if (count === feePerClasses) {
+      paymentStatus = 'due';
+    }
     result.set(id, {
-      paymentDue: count >= feePerClasses,
+      paymentStatus,
       classesSincePayment: count,
     });
   }

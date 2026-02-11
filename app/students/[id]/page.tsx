@@ -26,10 +26,11 @@ import {
 import EditStudentForm from '@/components/students/EditStudentForm';
 import SessionManager from '@/components/sessions/SessionManager';
 import { StudentDetailSkeleton } from '@/components/common/Skeletons';
+import { PaymentBadge } from '@/components/common/StatusBadge';
 import { formatTime, formatShortDate, formatCurrency } from '@/lib/format';
 import { DAY_LABELS } from '@/lib/constants';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
-import type { Student } from '@/types';
+import type { Student, PaymentIndicator } from '@/types';
 
 export default function StudentDetailPage({
   params,
@@ -39,6 +40,8 @@ export default function StudentDetailPage({
   const { id } = use(params);
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentIndicator>('none');
+  const [classesSincePayment, setClassesSincePayment] = useState(0);
   const [editOpened, { open: openEdit, close: closeEdit }] =
     useDisclosure(false);
 
@@ -56,8 +59,22 @@ export default function StudentDetailPage({
     }
   };
 
+  const loadPaymentStatus = async () => {
+    try {
+      const res = await fetch(`/api/students/${id}/payment-status`);
+      const data = await res.json();
+      if (data.ok) {
+        setPaymentStatus(data.data.paymentStatus);
+        setClassesSincePayment(data.data.classesSincePayment);
+      }
+    } catch {
+      // Error handled silently
+    }
+  };
+
   useEffect(() => {
     loadStudent();
+    loadPaymentStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -100,6 +117,11 @@ export default function StudentDetailPage({
             <Badge color={student.is_active ? 'green' : 'gray'} variant="light">
               {student.is_active ? 'Active' : 'Inactive'}
             </Badge>
+            <PaymentBadge
+              status={paymentStatus}
+              count={classesSincePayment}
+              total={student.fee_per_classes}
+            />
           </Group>
 
           <Divider />
@@ -184,7 +206,10 @@ export default function StudentDetailPage({
           <SessionManager
             studentId={student.id}
             student={student}
-            onSessionUpdated={loadStudent}
+            onSessionUpdated={() => {
+              loadStudent();
+              loadPaymentStatus();
+            }}
           />
         </Tabs.Panel>
 

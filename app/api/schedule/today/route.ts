@@ -42,7 +42,7 @@ export async function GET() {
       return {
         ...entry,
         ...(existing && { status: existing.status, sessionId: existing.id }),
-        paymentDue: payment?.paymentDue || false,
+        paymentStatus: payment?.paymentStatus || 'none',
         classesSincePayment: payment?.classesSincePayment || 0,
       };
     });
