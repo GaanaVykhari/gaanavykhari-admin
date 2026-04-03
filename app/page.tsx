@@ -94,7 +94,8 @@ export default function DashboardPage() {
       .catch(() => {})
       .finally(() => setStatsLoading(false));
 
-    fetch('/api/schedule/today')
+    const today = toLocalDateStr(new Date());
+    fetch(`/api/schedule/today?date=${today}`)
       .then(r => r.json())
       .then(data => {
         if (data.ok) {

@@ -174,24 +174,24 @@ export async function getHolidays(): Promise<Holiday[]> {
   return data || [];
 }
 
-export async function getTodaysSchedule(
-  students: Student[]
+export async function getScheduleForDate(
+  students: Student[],
+  date: Date = new Date()
 ): Promise<ScheduleEntry[]> {
-  const today = new Date();
   const holidays = await getHolidays();
-  const todaysSchedule: ScheduleEntry[] = [];
+  const entries: ScheduleEntry[] = [];
 
   for (const student of students) {
-    if (isSessionScheduledForDate(student, today, holidays)) {
-      todaysSchedule.push({
+    if (isSessionScheduledForDate(student, date, holidays)) {
+      entries.push({
         student,
-        time: getTimeForDate(student, today),
+        time: getTimeForDate(student, date),
         status: 'scheduled',
       });
     }
   }
 
-  return todaysSchedule.sort((a, b) => a.time.localeCompare(b.time));
+  return entries.sort((a, b) => a.time.localeCompare(b.time));
 }
 
 export async function getUpcomingSessions(

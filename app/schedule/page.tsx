@@ -22,7 +22,7 @@ import {
   getRelativeDateString,
   toLocalDateStr,
 } from '@/lib/format';
-import type { ScheduleEntry, UpcomingSession } from '@/types';
+import type { ScheduleEntry, UpcomingSession, SessionStatus } from '@/types';
 
 export default function SchedulePage() {
   const [todaySchedule, setTodaySchedule] = useState<ScheduleEntry[]>([]);
@@ -30,11 +30,15 @@ export default function SchedulePage() {
   const [todayLoading, setTodayLoading] = useState(true);
   const [upcomingLoading, setUpcomingLoading] = useState(true);
 
-  const loadSchedule = useCallback(async () => {
-    setTodayLoading(true);
-    setUpcomingLoading(true);
+  const loadSchedule = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setTodayLoading(true);
+      setUpcomingLoading(true);
+    }
 
-    fetch('/api/schedule/today')
+    const today = toLocalDateStr(new Date());
+
+    fetch(`/api/schedule/today?date=${today}`)
       .then(r => r.json())
       .then(data => {
         if (data.ok) {
@@ -61,9 +65,16 @@ export default function SchedulePage() {
 
   const handleStatusUpdate = async (
     studentId: string,
-    status: string,
+    status: SessionStatus,
     sessionId?: string
   ) => {
+    // Optimistic update: immediately reflect the change in UI
+    setTodaySchedule(prev =>
+      prev.map(entry =>
+        entry.student.id === studentId ? { ...entry, status } : entry
+      )
+    );
+
     try {
       if (sessionId) {
         await fetch(`/api/sessions/${sessionId}`, {
@@ -90,8 +101,11 @@ export default function SchedulePage() {
         message: `Session marked as ${status}`,
         color: 'green',
       });
-      loadSchedule();
+      // Silently refresh to sync with server (no loading skeletons)
+      loadSchedule({ silent: true });
     } catch {
+      // Revert optimistic update on failure
+      loadSchedule({ silent: true });
       notifications.show({
         title: 'Error',
         message: 'Failed to update session',

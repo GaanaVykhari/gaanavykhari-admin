@@ -1,11 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getTodaysSchedule, getPaymentDueMap } from '@/lib/schedule';
-import { toLocalDateStr } from '@/lib/format';
+import { getScheduleForDate, getPaymentDueMap } from '@/lib/schedule';
+import { parseLocalDate, toLocalDateStr } from '@/lib/format';
 import type { ApiResponse, ScheduleEntry } from '@/types';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    // Accept client-provided date to avoid server timezone mismatch
+    const dateParam = searchParams.get('date');
+    const targetDate = dateParam ? parseLocalDate(dateParam) : new Date();
+
     const supabase = await createClient();
     const { data: students } = await supabase
       .from('students')
@@ -20,10 +25,10 @@ export async function GET() {
       } satisfies ApiResponse<ScheduleEntry[]>);
     }
 
-    const schedule = await getTodaysSchedule(students);
+    const schedule = await getScheduleForDate(students, targetDate);
 
-    // Check for existing sessions today
-    const today = toLocalDateStr(new Date());
+    // Check for existing sessions for the target date
+    const today = toLocalDateStr(targetDate);
     const { data: existingSessions } = await supabase
       .from('sessions')
       .select('*')
