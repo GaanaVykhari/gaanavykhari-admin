@@ -196,9 +196,11 @@ export async function getScheduleForDate(
 
 export async function getUpcomingSessions(
   students: Student[],
-  limit: number = 5
+  limit: number = 5,
+  fromDate: Date = new Date()
 ): Promise<UpcomingSession[]> {
-  const today = new Date();
+  const today = new Date(fromDate);
+  today.setHours(0, 0, 0, 0);
   const holidays = await getHolidays();
   const upcomingSessions: UpcomingSession[] = [];
 

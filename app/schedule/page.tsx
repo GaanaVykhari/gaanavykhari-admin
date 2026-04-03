@@ -48,7 +48,7 @@ export default function SchedulePage() {
       .catch(() => {})
       .finally(() => setTodayLoading(false));
 
-    fetch('/api/schedule/upcoming?limit=10')
+    fetch(`/api/schedule/upcoming?limit=10&date=${today}`)
       .then(r => r.json())
       .then(data => {
         if (data.ok) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getUpcomingSessions, getPaymentDueMap } from '@/lib/schedule';
+import { parseLocalDate } from '@/lib/format';
 import type { ApiResponse, UpcomingSession } from '@/types';
 
 export async function GET(request: NextRequest) {
@@ -8,6 +9,9 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '10');
+    // Accept client-provided date to avoid server timezone mismatch
+    const dateParam = searchParams.get('date');
+    const fromDate = dateParam ? parseLocalDate(dateParam) : new Date();
 
     const { data: students } = await supabase
       .from('students')
@@ -22,7 +26,7 @@ export async function GET(request: NextRequest) {
       } satisfies ApiResponse<UpcomingSession[]>);
     }
 
-    const upcoming = await getUpcomingSessions(students, limit);
+    const upcoming = await getUpcomingSessions(students, limit, fromDate);
 
     // Get payment due status
     const studentIds = upcoming.map(u => u.student.id);

@@ -105,7 +105,7 @@ export default function DashboardPage() {
       .catch(() => {})
       .finally(() => setTodayLoading(false));
 
-    fetch('/api/schedule/upcoming?limit=5')
+    fetch(`/api/schedule/upcoming?limit=5&date=${today}`)
       .then(r => r.json())
       .then(data => {
         if (data.ok) {
